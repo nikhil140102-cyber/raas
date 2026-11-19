@@ -1,0 +1,5 @@
+AvaStars Hire v4 (patch 04)
+- Collapsible YouTube-style menu, coloured dashboard
+- ATS sorting + include/exclude location filters
+- Per-client and per-job AI call questions + question library
+- Post & announce (LinkedIn samples, Indeed/Naukri fields), public careers sharing
