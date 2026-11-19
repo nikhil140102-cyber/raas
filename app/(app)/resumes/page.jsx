@@ -7,6 +7,7 @@ import MatchRunner from '@/components/MatchRunner';
 import RereadRunner from '@/components/RereadRunner';
 import { aiEnabled } from '@/lib/ai';
 import FilterBar from '@/components/FilterBar';
+import { ColSelect } from '@/components/ColFilter';
 import { readFilters, candidateWhere, orderBy, sortHref } from '@/lib/filters';
 
 export const metadata = { title: 'Resume database — AvaStars Hire' };
@@ -48,6 +49,8 @@ export default async function ResumesPage({ searchParams }) {
   const failed = sp.failed ? await q('SELECT id, filename, parse_error, created_at FROM files WHERE parse_error IS NOT NULL ORDER BY created_at DESC LIMIT 30') : [];
   const failedCount = await one('SELECT count(*)::int AS n FROM files WHERE parse_error IS NOT NULL');
   const inbox = Boolean(process.env.IMAP_HOST);
+  const sources = (await q("SELECT DISTINCT source FROM candidates WHERE source IS NOT NULL AND source <> '' ORDER BY source")).map((r) => r.source);
+  const F = 'filters';
 
   return (
     <>
@@ -90,9 +93,9 @@ export default async function ResumesPage({ searchParams }) {
       ) : null}
 
       <section className="card flush">
-        <FilterBar base="/resumes" f={f} jobs={jobs} jobId={forJob} showJobPicker defaultSort={defaultSort} />
-        <div className="row small muted" style={{ padding: '0 20px 12px' }}>Showing {total.n} of {all.n}{forJob && job ? ` · match % for ${job.title}` : ''}. Click a column title to sort; click again to reverse.</div>
-        {rows.length ? (
+        <FilterBar base="/resumes" f={f} jobs={jobs} jobId={forJob} showJobPicker defaultSort={defaultSort} id={F} columnFilters />
+        <div className="row small muted" style={{ padding: '0 20px 12px' }}>Showing {total.n} of {all.n}{forJob && job ? ` · match % for ${job.title}` : ''}. Click a column title to sort; type in the boxes under the titles and press Enter to filter.</div>
+        {(
           <div className="tablewrap">
             <table className="t" style={{ minWidth: 1150 }}>
               <thead><tr>
@@ -104,8 +107,20 @@ export default async function ResumesPage({ searchParams }) {
                 <th>Source</th>
                 <SortTh label={forJob ? 'ATS match %' : 'Best ATS match %'} k="match" sp={sp} f={f} def={defaultSort} />
                 <SortTh label="Added" k="added" sp={sp} f={f} def={defaultSort} />
+              </tr>
+              <tr className="colfilters">
+                <th><input form={F} className="colf" name="name" defaultValue={f.name} placeholder="Name, title, company" aria-label="Filter by name" /></th>
+                <th><span className="pair"><input form={F} className="colf" type="number" step="any" name="exp_min" defaultValue={f.expMin ?? ''} placeholder="min" aria-label="Experience from" /><input form={F} className="colf" type="number" step="any" name="exp_max" defaultValue={f.expMax ?? ''} placeholder="max" aria-label="Experience to" /></span></th>
+                <th><input form={F} className="colf" name="skill" defaultValue={f.skill} placeholder="e.g. AWS, Sales" aria-label="Filter by skill" /></th>
+                <th><input form={F} className="colf" name="loc" defaultValue={f.loc.join(', ')} placeholder="e.g. Pune, Noida" aria-label="Only these locations" /></th>
+                <th><input form={F} className="colf" type="number" step="any" name="ectc_max" defaultValue={f.ectcMax ?? ''} placeholder="Max ECTC ₹L" aria-label="Maximum expected CTC" /></th>
+                <th><ColSelect form={F} name="np_max" value={f.npMax ?? ''} label="Maximum notice" options={[['', 'Any'], ['0', 'Immediate'], ['15', '≤ 15 d'], ['30', '≤ 30 d'], ['60', '≤ 60 d'], ['90', '≤ 90 d']]} /></th>
+                <th><ColSelect form={F} name="source" value={f.source} label="Source" options={[['', 'All'], ...sources.map((x) => [x, x])]} /></th>
+                <th><ColSelect form={F} name="min" value={f.minMatch ?? ''} label="Minimum match" options={[['', 'Any %'], ['40', '≥ 40%'], ['50', '≥ 50%'], ['60', '≥ 60%'], ['70', '≥ 70%'], ['80', '≥ 80%'], ['90', '≥ 90%']]} /></th>
+                <th><ColSelect form={F} name="added" value={f.addedDays ?? ''} label="Added within" options={[['', 'Any time'], ['1', 'Today'], ['7', '7 days'], ['30', '30 days'], ['90', '90 days']]} /></th>
               </tr></thead>
               <tbody>
+                {!rows.length ? <tr><td colSpan={9} className="empty">No candidates match these filters.</td></tr> : null}
                 {rows.map((r) => (
                   <tr key={r.id}>
                     <td className="namecell"><Link href={`/candidates/${r.id}${r.app_id ? `?app=${r.app_id}` : ''}`}>{r.name}</Link><div>{[r.current_title, r.current_company].filter(Boolean).join(' · ') || '—'}</div></td>
@@ -122,7 +137,7 @@ export default async function ResumesPage({ searchParams }) {
               </tbody>
             </table>
           </div>
-        ) : <div className="empty">No candidates found.</div>}
+        )}
         {total.n > 50 ? (
           <div className="row" style={{ padding: 16, justifyContent: 'flex-end' }}>
             {page > 1 ? <Link className="btn sm" href={`/resumes?${new URLSearchParams({ ...sp, page: String(page - 1) })}`}>Previous</Link> : null}

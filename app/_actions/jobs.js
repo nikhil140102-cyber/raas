@@ -5,7 +5,7 @@ import { q, one, j } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { num, list, slugify, token, PORTALS } from '@/lib/util';
 import { draftJD, suggestQuestions, extractJD, readDocumentWithAI } from '@/lib/ai';
-import { extractText } from '@/lib/ingest';
+import { extractText, cleanText } from '@/lib/ingest';
 
 const s = (fd, k) => String(fd.get(k) || '').trim() || null;
 
@@ -114,14 +114,14 @@ export async function setJobStatus(formData) {
 /** JD import: reads an uploaded file or pasted text and returns form fields. */
 export async function importJD(formData) {
   await requireUser();
-  let text = String(formData.get('text') || '').trim();
+  let text = cleanText(formData.get('text')).trim();
   const file = formData.get('file');
   if (file && typeof file.arrayBuffer === 'function' && file.size > 0) {
     if (file.size > 10 * 1024 * 1024) return { error: 'File is larger than 10 MB.' };
     try {
       const buf = Buffer.from(await file.arrayBuffer());
       text = await extractText(buf, file.name, file.type);
-      if (/\.pdf$/i.test(file.name) && text.replace(/\s/g, '').length < 40) text = await readDocumentWithAI(buf, file.name, file.type);
+      if (/\.pdf$/i.test(file.name) && text.replace(/\s/g, '').length < 40) text = cleanText(await readDocumentWithAI(buf, file.name, file.type));
     } catch (e) { return { error: e.message }; }
   }
   if (!text || text.replace(/\s/g, '').length < 40) return { error: 'Paste the job description or choose a PDF, Word or text file.' };

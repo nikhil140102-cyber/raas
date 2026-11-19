@@ -1,3 +1,8 @@
+AvaStars Hire v4.2 (patch 07)
+- Fix: resumes failing with 'invalid byte sequence for encoding UTF8: 0x00'
+- Clear messages for big files (4 MB online limit) and one automatic retry
+- Compact filter bar; filters under each column of the resume table
+
 AvaStars Hire v4.1 (patch 06)
 - JD import (file, screenshot or pasted text) fills the new requirement form
 - Required and preferred certifications on jobs, counted in match %

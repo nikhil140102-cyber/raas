@@ -250,3 +250,23 @@ details.card > .filters { padding: 14px 0 0; border: 0; background: none; }
 .column { border-top: 3px solid var(--col, var(--input)); border-radius: 12px; }
 .pcard { box-shadow: var(--shadow); transition: box-shadow .15s, transform .15s; }
 .pcard:hover { box-shadow: var(--shadow-lg); }
+
+/* ---- v4.1: compact filter bar + column filters ---- */
+.filters.compact { gap: 8px; padding: 12px 16px; }
+.filters.compact > .filters-row { gap: 8px; align-items: center; flex-wrap: nowrap; }
+.filters.compact > .filters-row > input.grow { flex: 1 1 auto; min-width: 160px; }
+.filters.compact > .filters-row select { width: auto; max-width: 260px; }
+.filters.compact input, .filters.compact select { min-height: 36px; height: 36px; font-size: 14px; }
+.filters.compact .more > summary { cursor: pointer; color: var(--accent); width: max-content; list-style: none; padding: 2px 0; }
+.filters.compact .more > summary::-webkit-details-marker { display: none; }
+.filters.compact .more > summary::before { content: '▸ '; }
+.filters.compact .more[open] > summary::before { content: '▾ '; }
+.filters.compact .more > .filters-row { margin-top: 8px; }
+.filters.compact .more .field { font-size: 13px; }
+@media (max-width: 700px) { .filters.compact > .filters-row { flex-wrap: wrap; } }
+tr.colfilters th { padding-top: 0; padding-bottom: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.colf, input.colf, select.colf { min-height: 30px; height: 30px; padding: 2px 8px; font-size: 12.5px; width: 100%; min-width: 0; border-radius: 8px; }
+tr.colfilters .pair { gap: 4px; }
+tr.colfilters .pair input { width: 54px; }
+
+tr.colfilters select.colf { min-width: 88px; }

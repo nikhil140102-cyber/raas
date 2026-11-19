@@ -2,6 +2,8 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+const MAX_BYTES = 4 * 1024 * 1024; // Vercel rejects request bodies over about 4.5 MB
+
 /** Uploads files one by one (keeps each request short) and shows live progress. */
 export default function Uploader({ jobs }) {
   const input = useRef(null);
@@ -14,7 +16,7 @@ export default function Uploader({ jobs }) {
   async function run(files) {
     const list = [...files].filter((f) => /\.(pdf|docx|txt|jpe?g|png|webp)$/i.test(f.name));
     const skipped = files.length - list.length;
-    if (!list.length) { setItems([{ name: 'No PDF, DOCX or TXT files selected', status: 'failed' }]); return; }
+    if (!list.length) { setItems([{ name: 'No PDF, Word, TXT or image files selected', status: 'failed' }]); return; }
     setRunning(true);
     setItems([...list.map((f) => ({ name: f.name, status: 'waiting' })), ...(skipped ? [{ name: `${skipped} file(s) skipped — not PDF/DOCX/TXT/JPG/PNG`, status: 'failed' }] : [])]);
     for (let i = 0; i < list.length; i++) {
@@ -23,12 +25,24 @@ export default function Uploader({ jobs }) {
       fd.set('file', list[i]);
       if (jobId) fd.set('job_id', jobId);
       let result;
-      try {
-        const res = await fetch('/api/resumes/upload', { method: 'POST', body: fd });
-        result = await res.json();
-        if (!res.ok) result = { status: 'failed', error: result.error || `HTTP ${res.status}` };
-      } catch (e) {
-        result = { status: 'failed', error: e.message };
+      if (list[i].size > MAX_BYTES) {
+        result = { status: 'failed', error: `File is ${(list[i].size / 1048576).toFixed(1)} MB; the online limit is 4 MB. Compress the PDF (e.g. ilovepdf.com) and upload again.` };
+      } else {
+        for (let attempt = 1; attempt <= 2; attempt++) {
+          try {
+            const res = await fetch('/api/resumes/upload', { method: 'POST', body: fd });
+            const raw = await res.text();
+            let data; try { data = JSON.parse(raw); } catch { data = null; }
+            if (res.status === 413) result = { status: 'failed', error: 'File is too large for the server (4 MB limit). Compress the PDF and upload again.' };
+            else if (!data) result = { status: 'failed', error: res.status === 504 ? 'Timed out reading this file. Try it again on its own.' : `Server error (HTTP ${res.status}). Try again.` };
+            else result = res.ok ? data : { status: 'failed', error: data.error || `HTTP ${res.status}` };
+            break;
+          } catch (e) {
+            // Network hiccup: try once more before giving up.
+            result = { status: 'failed', error: 'Upload interrupted (network or file too large). Check your connection and try this file again.' };
+            if (attempt === 1) await new Promise((r) => setTimeout(r, 1500));
+          }
+        }
       }
       setItems((prev) => prev.map((it, k) => (k === i ? { ...it, ...result } : it)));
     }
@@ -48,7 +62,7 @@ export default function Uploader({ jobs }) {
         onDrop={(e) => { e.preventDefault(); setOver(false); if (!running) run(e.dataTransfer.files); }}
       >
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4" /><path d="M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
-        <h2>Drop PDF or Word resumes here</h2>
+        <h2>Drop PDF, Word or image resumes here</h2>
         <p className="sub">Up to 200 at once. Each one is read, de-duplicated and given a match % for every open job. Strong matches go straight into the pipeline.</p>
         <div className="row" style={{ justifyContent: 'center', alignItems: 'flex-end' }}>
           <label className="field" style={{ textAlign: 'left' }}>Tag to job (optional)
