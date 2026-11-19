@@ -4,7 +4,8 @@ import { redirect } from 'next/navigation';
 import { q, one, j } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { num, list, slugify, token, PORTALS } from '@/lib/util';
-import { draftJD, suggestQuestions } from '@/lib/ai';
+import { draftJD, suggestQuestions, extractJD, readDocumentWithAI } from '@/lib/ai';
+import { extractText } from '@/lib/ingest';
 
 const s = (fd, k) => String(fd.get(k) || '').trim() || null;
 
@@ -29,6 +30,8 @@ function jobFromForm(fd) {
     joining_timeline: s(fd, 'joining_timeline'),
     mandatory_skills: list(fd.get('mandatory_skills')),
     preferred_skills: list(fd.get('preferred_skills')),
+    required_certs: list(fd.get('required_certs')),
+    preferred_certs: list(fd.get('preferred_certs')),
     description: s(fd, 'description'),
     screening_questions: questions,
     interview_rounds: rounds,
@@ -44,8 +47,14 @@ export async function saveJob(formData) {
   const id = num(formData.get('id'));
   const v = jobFromForm(formData);
   if (!v.title) throw new Error('Job title is required');
-  const cols = ['client_id', 'title', 'openings', 'employment_type', 'work_mode', 'location', 'exp_min', 'exp_max', 'ctc_min', 'ctc_max', 'joining_timeline', 'mandatory_skills', 'preferred_skills', 'description', 'screening_questions', 'interview_rounds', 'client_contact', 'hm_notes', 'public_company', 'min_score'];
-  const jsonCols = new Set(['mandatory_skills', 'preferred_skills', 'screening_questions', 'interview_rounds', 'client_contact', 'hm_notes']);
+  // The contact section is hidden for now: keep an existing contact, otherwise use the client's contact.
+  if (!v.client_contact.name && !v.client_contact.email) {
+    const prev = id ? await one('SELECT client_contact FROM jobs WHERE id = $1', [id]) : null;
+    const c = v.client_id ? await one('SELECT contact_name, contact_email, contact_phone FROM clients WHERE id = $1', [v.client_id]) : null;
+    v.client_contact = prev?.client_contact?.name || prev?.client_contact?.email ? prev.client_contact : { name: c?.contact_name || null, email: c?.contact_email || null, phone: c?.contact_phone || null };
+  }
+  const cols = ['client_id', 'title', 'openings', 'employment_type', 'work_mode', 'location', 'exp_min', 'exp_max', 'ctc_min', 'ctc_max', 'joining_timeline', 'mandatory_skills', 'preferred_skills', 'required_certs', 'preferred_certs', 'description', 'screening_questions', 'interview_rounds', 'client_contact', 'hm_notes', 'public_company', 'min_score'];
+  const jsonCols = new Set(['mandatory_skills', 'preferred_skills', 'required_certs', 'preferred_certs', 'screening_questions', 'interview_rounds', 'client_contact', 'hm_notes']);
   const params = cols.map((c) => (jsonCols.has(c) ? j(v[c]) : v[c]));
   const cast = (c, i) => `$${i + 1}${jsonCols.has(c) ? '::jsonb' : ''}`;
   let jobId = id;
@@ -100,4 +109,32 @@ export async function setJobStatus(formData) {
   if (status === 'closed') await q(`UPDATE job_postings SET status = CASE WHEN portal IN ('careers','google') THEN 'closed' ELSE 'close_manually' END, updated_at = now() WHERE job_id = $1 AND status <> 'not_posted'`, [jobId]);
   if (status === 'open') await q(`UPDATE job_postings SET status = 'live', updated_at = now() WHERE job_id = $1 AND portal = 'careers'`, [jobId]);
   revalidatePath(`/jobs/${jobId}`);
+}
+
+/** JD import: reads an uploaded file or pasted text and returns form fields. */
+export async function importJD(formData) {
+  await requireUser();
+  let text = String(formData.get('text') || '').trim();
+  const file = formData.get('file');
+  if (file && typeof file.arrayBuffer === 'function' && file.size > 0) {
+    if (file.size > 10 * 1024 * 1024) return { error: 'File is larger than 10 MB.' };
+    try {
+      const buf = Buffer.from(await file.arrayBuffer());
+      text = await extractText(buf, file.name, file.type);
+      if (/\.pdf$/i.test(file.name) && text.replace(/\s/g, '').length < 40) text = await readDocumentWithAI(buf, file.name, file.type);
+    } catch (e) { return { error: e.message }; }
+  }
+  if (!text || text.replace(/\s/g, '').length < 40) return { error: 'Paste the job description or choose a PDF, Word or text file.' };
+  const f = await extractJD(text);
+  const join = (a) => (Array.isArray(a) ? a.join(', ') : a || '');
+  return {
+    by: f.by,
+    fields: {
+      title: f.title || '', openings: f.openings ?? '', employment_type: f.employment_type || '', work_mode: f.work_mode || '',
+      location: f.location || '', exp_min: f.exp_min ?? '', exp_max: f.exp_max ?? '', ctc_min: f.ctc_min ?? '', ctc_max: f.ctc_max ?? '',
+      joining_timeline: f.joining_timeline || '', mandatory_skills: join(f.mandatory_skills), preferred_skills: join(f.preferred_skills),
+      required_certs: join(f.required_certs), preferred_certs: join(f.preferred_certs), description: f.description || text,
+      questions: Array.isArray(f.questions) ? f.questions.map((x) => (typeof x === 'string' ? `${x} | Open answer` : `${x.q} | ${x.type || 'Open answer'}`)).join('\n') : '',
+    },
+  };
 }

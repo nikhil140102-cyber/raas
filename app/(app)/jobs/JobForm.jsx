@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { saveJob, aiDraftDescription, aiSuggestQuestions } from '../../_actions/jobs';
+import { saveJob, aiDraftDescription, aiSuggestQuestions, importJD } from '../../_actions/jobs';
 import { SubmitButton } from '@/components/client';
 
 const CONDITIONS = ['Immediate joiners preferred', 'Stability: 2+ years in last job', 'Notice period buyout possible', 'Relocation support available'];
-const REQUIRED = [['title', 'Job title'], ['openings', 'Number of openings'], ['description', 'Job description'], ['ctc_max', 'Salary package'], ['location', 'Job location'], ['work_mode', 'Work mode'], ['exp_min', 'Experience'], ['mandatory_skills', 'Mandatory skills'], ['employment_type', 'Employment type'], ['joining_timeline', 'Joining timeline'], ['rounds', 'Interview process'], ['contact_name', 'Client contact']];
+const REQUIRED = [['title', 'Job title'], ['openings', 'Number of openings'], ['description', 'Job description'], ['ctc_max', 'Salary package'], ['location', 'Job location'], ['work_mode', 'Work mode'], ['exp_min', 'Experience'], ['mandatory_skills', 'Mandatory skills'], ['employment_type', 'Employment type'], ['joining_timeline', 'Joining timeline'], ['rounds', 'Interview process']];
 
 export default function JobForm({ job = {}, clients = [], clientId }) {
   const formRef = useRef(null);
@@ -20,7 +20,7 @@ export default function JobForm({ job = {}, clients = [], clientId }) {
   function countFilled(src) {
     const get = (k) => {
       if (src instanceof FormData) return src.get(k);
-      const map = { rounds: (src.interview_rounds || []).length, contact_name: src.client_contact?.name, mandatory_skills: (src.mandatory_skills || []).length };
+      const map = { rounds: (src.interview_rounds || []).length, mandatory_skills: (src.mandatory_skills || []).length };
       return k in map ? map[k] : src[k];
     };
     return REQUIRED.filter(([k]) => { const v = get(k); return v !== null && v !== undefined && String(v).trim() !== '' && v !== 0; }).length;
@@ -37,12 +37,61 @@ export default function JobForm({ job = {}, clients = [], clientId }) {
     } catch (e) { setErr(e.message); } finally { setBusy(''); }
   }
 
+  const [imp, setImp] = useState({ open: !job.id, busy: false, msg: '', err: '' });
+  async function runImport(e) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    setImp((x) => ({ ...x, busy: true, msg: '', err: '' }));
+    try {
+      const res = await importJD(fd);
+      if (res.error) throw new Error(res.error);
+      const form = formRef.current;
+      let n = 0;
+      for (const [k, v] of Object.entries(res.fields)) {
+        if (v === '' || v === null || v === undefined) continue;
+        const el = form.elements[k];
+        if (!el) continue;
+        if (el instanceof RadioNodeList) { for (const r of el) r.checked = r.value === String(v); n += 1; continue; }
+        if (el.tagName === 'SELECT' && ![...el.options].some((o) => (o.value || o.text) === String(v))) continue;
+        el.value = String(v);
+        n += 1;
+      }
+      setFilled(countFilled(new FormData(form)));
+      setImp({ open: false, busy: false, err: '', msg: `Filled ${n} fields from the JD${res.by === 'ai' ? ' using AI' : ''}. Check them below, then save.` });
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (er) { setImp((x) => ({ ...x, busy: false, err: er.message })); }
+  }
+  async function paste(name) {
+    setErr('');
+    try {
+      const text = await navigator.clipboard.readText();
+      const el = formRef.current.elements[name];
+      const at = el.selectionStart ?? el.value.length;
+      el.value = el.value.slice(0, at) + text + el.value.slice(el.selectionEnd ?? at);
+      setFilled(countFilled(new FormData(formRef.current)));
+    } catch { setErr('Your browser blocked clipboard access. Click in the box and press Ctrl+V instead.'); }
+  }
+
   const hm = job.hm_notes || {};
-  const cc = job.client_contact || {};
   const sel = clientId || job.client_id || '';
-  const client = clients.find((c) => String(c.id) === String(sel));
 
   return (
+    <>
+    <section className="card" style={{ marginBottom: 20, borderLeft: '4px solid var(--accent)' }}>
+      <div className="header">
+        <div className="titles"><h2>Import a JD</h2><p className="small muted">Upload the client's job description (PDF, Word, text or a screenshot) or paste it. The form below fills itself in.</p></div>
+        <button type="button" className="btn sm" onClick={() => setImp((x) => ({ ...x, open: !x.open }))}>{imp.open ? 'Hide' : 'Import JD'}</button>
+      </div>
+      {imp.msg ? <div className="notice info">{imp.msg}</div> : null}
+      {imp.open ? (
+        <form onSubmit={runImport} className="stack">
+          <label className="field">JD file<input type="file" name="file" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp" /></label>
+          <label className="field">…or paste the JD text<textarea name="text" rows={6} placeholder="Paste the full job description here" /></label>
+          {imp.err ? <p className="error" role="alert">{imp.err}</p> : null}
+          <div><button type="submit" className="btn ai" disabled={imp.busy}>{imp.busy ? 'Reading the JD…' : 'Fill the form from this JD'}</button></div>
+        </form>
+      ) : null}
+    </section>
     <form ref={formRef} action={saveJob} onChange={() => setFilled(countFilled(new FormData(formRef.current)))} className="cols">
       {job.id ? <input type="hidden" name="id" value={job.id} /> : null}
       <div className="col-main" style={{ gap: 20 }}>
@@ -87,20 +136,24 @@ export default function JobForm({ job = {}, clients = [], clientId }) {
         </section>
 
         <section className="card">
-          <h2>2. Skills</h2>
+          <h2>2. Skills and certifications</h2>
           <label className="field">Mandatory skills * <span className="hint">Comma separated</span><input name="mandatory_skills" defaultValue={(job.mandatory_skills || []).join(', ')} placeholder="AWS, Terraform, Kubernetes (EKS), CI/CD" /></label>
           <label className="field">Preferred skills (good to have)<input name="preferred_skills" defaultValue={(job.preferred_skills || []).join(', ')} /></label>
+          <div className="grid">
+            <label className="field">Required certifications <span className="hint">Comma separated; counted like must-have skills</span><input name="required_certs" defaultValue={(job.required_certs || []).join(', ')} placeholder="AWS Solutions Architect Associate" /></label>
+            <label className="field">Preferred certifications <span className="hint">Good to have</span><input name="preferred_certs" defaultValue={(job.preferred_certs || []).join(', ')} placeholder="CKA, Terraform Associate" /></label>
+          </div>
         </section>
 
         <section className="card">
-          <div className="header"><h2>3. Job description *</h2><button type="button" className="btn ai sm" onClick={() => ai('jd')} disabled={!!busy}>{busy === 'jd' ? 'Writing…' : 'Draft with AI from the fields above'}</button></div>
+          <div className="header"><h2>3. Job description *</h2><div className="row" style={{ gap: 8 }}><button type="button" className="btn sm" onClick={() => paste('description')}>Paste</button><button type="button" className="btn ai sm" onClick={() => ai('jd')} disabled={!!busy}>{busy === 'jd' ? 'Writing…' : 'Draft with AI from the fields above'}</button></div></div>
           <label className="field">Responsibilities, must-have and good-to-have<textarea name="description" rows={10} defaultValue={job.description || ''} /></label>
         </section>
 
         <section className="card">
           <div className="header">
             <div className="titles"><h2>4. Screening questions <span className="small muted">(optional)</span></h2><p className="small muted">The AI screening bot asks these on the call. One per line; add “| type” to label the answer type.</p></div>
-            <button type="button" className="btn ai sm" onClick={() => ai('questions')} disabled={!!busy}>{busy === 'questions' ? 'Thinking…' : 'Suggest questions from JD'}</button>
+            <div className="row" style={{ gap: 8 }}><button type="button" className="btn sm" onClick={() => paste('questions')}>Paste</button><button type="button" className="btn ai sm" onClick={() => ai('questions')} disabled={!!busy}>{busy === 'questions' ? 'Thinking…' : 'Suggest questions from JD'}</button></div>
           </div>
           <label className="field"><span className="sr">Questions</span><textarea name="questions" rows={6} defaultValue={(job.screening_questions || []).map((x) => `${x.q} | ${x.type}`).join('\n')} placeholder="What is your current CTC and expected CTC? | Salary" /></label>
           {err ? <p className="error" role="alert">{err}</p> : null}
@@ -111,17 +164,9 @@ export default function JobForm({ job = {}, clients = [], clientId }) {
           <label className="field">One round per line: “Round — Who takes it”<textarea name="rounds" rows={4} defaultValue={(job.interview_rounds || []).map((r) => `${r.name}${r.by ? ` — ${r.by}` : ''}`).join('\n') || 'AI screening call — AvaStars bot\nTechnical interview — Client panel\nHiring manager round — Hiring manager\nHR and offer — Client HR'} /></label>
         </section>
 
-        <section className="card">
-          <h2>6. Client point of contact *</h2>
-          <div className="grid">
-            <label className="field">Name<input name="contact_name" defaultValue={cc.name || client?.contact_name || ''} /></label>
-            <label className="field">Email <span className="hint">Shortlists are sent here</span><input name="contact_email" type="email" defaultValue={cc.email || client?.contact_email || ''} /></label>
-            <label className="field">Phone<input name="contact_phone" type="tel" defaultValue={cc.phone || client?.contact_phone || ''} /></label>
-          </div>
-        </section>
 
         <section className="card">
-          <div className="titles"><h2>7. Hiring manager call</h2><p className="small muted">Notes from the formal call with the hiring manager</p></div>
+          <div className="titles"><h2>6. Hiring manager call</h2><p className="small muted">Notes from the formal call with the hiring manager</p></div>
           <div className="grid">
             <label className="field">Hiring manager<input name="hm_manager" defaultValue={hm.manager || ''} /></label>
             <label className="field">Call date<input name="hm_date" type="date" defaultValue={hm.date || ''} /></label>
@@ -151,5 +196,6 @@ export default function JobForm({ job = {}, clients = [], clientId }) {
         </section>
       </aside>
     </form>
+    </>
   );
 }

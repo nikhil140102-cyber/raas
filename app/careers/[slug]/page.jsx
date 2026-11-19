@@ -43,6 +43,8 @@ export default async function JobPublicPage({ params }) {
           <p className="pre" style={{ lineHeight: 1.7, color: 'var(--ink2)' }}>{job.description}</p>
           {(job.mandatory_skills || []).length ? <p><strong>Must have:</strong> {job.mandatory_skills.join(', ')}</p> : null}
           {(job.preferred_skills || []).length ? <p><strong>Good to have:</strong> {job.preferred_skills.join(', ')}</p> : null}
+          {(job.required_certs || []).length ? <p><strong>Required certifications:</strong> {job.required_certs.join(', ')}</p> : null}
+          {(job.preferred_certs || []).length ? <p><strong>Preferred certifications:</strong> {job.preferred_certs.join(', ')}</p> : null}
         </section>
         {open ? <ShareJob url={careersUrl(job)} title={job.title} /> : null}
         {open ? <ApplyForm jobId={job.id} title={job.title} /> : null}

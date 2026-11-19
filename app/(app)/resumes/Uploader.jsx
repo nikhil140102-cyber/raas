@@ -12,11 +12,11 @@ export default function Uploader({ jobs }) {
   const [running, setRunning] = useState(false);
 
   async function run(files) {
-    const list = [...files].filter((f) => /\.(pdf|docx|txt)$/i.test(f.name));
+    const list = [...files].filter((f) => /\.(pdf|docx|txt|jpe?g|png|webp)$/i.test(f.name));
     const skipped = files.length - list.length;
     if (!list.length) { setItems([{ name: 'No PDF, DOCX or TXT files selected', status: 'failed' }]); return; }
     setRunning(true);
-    setItems([...list.map((f) => ({ name: f.name, status: 'waiting' })), ...(skipped ? [{ name: `${skipped} file(s) skipped — not PDF/DOCX/TXT`, status: 'failed' }] : [])]);
+    setItems([...list.map((f) => ({ name: f.name, status: 'waiting' })), ...(skipped ? [{ name: `${skipped} file(s) skipped — not PDF/DOCX/TXT/JPG/PNG`, status: 'failed' }] : [])]);
     for (let i = 0; i < list.length; i++) {
       setItems((prev) => prev.map((it, k) => (k === i ? { ...it, status: 'reading' } : it)));
       const fd = new FormData();
@@ -58,7 +58,7 @@ export default function Uploader({ jobs }) {
             </select>
           </label>
           <button type="button" className="btn primary" onClick={() => input.current?.click()} disabled={running}>{running ? 'Uploading…' : 'Choose files'}</button>
-          <input ref={input} type="file" multiple accept=".pdf,.docx,.txt" className="sr" onChange={(e) => { run(e.target.files); e.target.value = ''; }} aria-label="Choose resume files" />
+          <input ref={input} type="file" multiple accept=".pdf,.docx,.txt,.jpg,.jpeg,.png,.webp" className="sr" onChange={(e) => { run(e.target.files); e.target.value = ''; }} aria-label="Choose resume files" />
         </div>
       </div>
       {items.length ? (
