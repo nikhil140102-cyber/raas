@@ -1,3 +1,12 @@
+AvaStars Hire v4.4 (patch 09)
+- Any number of accounts per role; role tabs with counts and user search
+- Add several users at once with generated passwords
+
+AvaStars Hire v4.3 (patch 08)
+- Roles: Admin, HR / Recruiter, Intern with permissions on every action
+- Settings > Users and roles: add users with a role, change role, reset password, deactivate
+- Interns: limited pipeline stages, no client fees, no job editing or client sharing
+
 AvaStars Hire v4.2 (patch 07)
 - Fix: resumes failing with 'invalid byte sequence for encoding UTF8: 0x00'
 - Clear messages for big files (4 MB online limit) and one automatic retry

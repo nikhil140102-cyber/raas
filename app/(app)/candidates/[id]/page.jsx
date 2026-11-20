@@ -6,10 +6,14 @@ import { AutoSelect, ConfirmButton } from '@/components/client';
 import { STAGES, lakh, notice, fmtDate, initials, SCREENING_STATUS, REJECT_REASONS } from '@/lib/util';
 import { moveStage, updateCandidate, addCandidateToJob, rescore, shareOne, deleteCandidate } from '../../../_actions/candidates';
 import { askForSlot, callNow } from '../../../_actions/screening';
+import { requireUser } from '@/lib/auth';
+import { can, canMoveTo } from '@/lib/roles';
 
 export default async function CandidatePage({ params, searchParams }) {
   const { id } = await params;
   const sp = await searchParams;
+  const me = await requireUser();
+  const stageOpts = STAGES.filter((s) => canMoveTo(me, s.id)).map((s) => ({ value: s.id, label: s.label }));
   const c = await one('SELECT * FROM candidates WHERE id = $1', [Number(id)]);
   if (!c) notFound();
   const apps = await q('SELECT a.*, j.title, j.mandatory_skills FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.candidate_id = $1 ORDER BY a.updated_at DESC', [c.id]);
@@ -35,9 +39,9 @@ export default async function CandidatePage({ params, searchParams }) {
           </div>
         }
       >
-        {app ? <AutoSelect action={moveStage} name="stage" value={app.stage} label="Stage" options={STAGES.map((s) => ({ value: s.id, label: s.label }))} hidden={{ app_id: app.id }} /> : null}
-        <Link href={`/candidates/${c.id}/resume?app=${app?.id || ''}`} className="btn">Edit resume for client</Link>
-        {app ? <form action={shareOne}><input type="hidden" name="app_id" value={app.id} /><button className="btn primary" type="submit">Forward to client</button></form> : null}
+        {app ? (canMoveTo(me, app.stage) ? <AutoSelect action={moveStage} name="stage" value={app.stage} label="Stage" options={stageOpts} hidden={{ app_id: app.id }} /> : <StagePill stage={app.stage} />) : null}
+        {can(me, 'clients.share') ? <Link href={`/candidates/${c.id}/resume?app=${app?.id || ''}`} className="btn">Edit resume for client</Link> : null}
+        {app && can(me, 'clients.share') ? <form action={shareOne}><input type="hidden" name="app_id" value={app.id} /><button className="btn primary" type="submit">Forward to client</button></form> : null}
       </Header>
 
       {apps.length > 1 ? (
@@ -115,7 +119,7 @@ export default async function CandidatePage({ params, searchParams }) {
               <button className="btn" type="submit">Add and score</button>
             </form>
           ) : null}
-          <form action={deleteCandidate}><input type="hidden" name="id" value={c.id} /><ConfirmButton message="Delete this candidate and all their data? This cannot be undone." className="btn danger sm">Delete candidate (data request)</ConfirmButton></form>
+          {can(me, 'candidates.delete') ? <form action={deleteCandidate}><input type="hidden" name="id" value={c.id} /><ConfirmButton message="Delete this candidate and all their data? This cannot be undone." className="btn danger sm">Delete candidate (data request)</ConfirmButton></form> : null}
         </div>
 
         <div className="col-main" style={{ flex: '2 1 480px' }}>
@@ -160,7 +164,7 @@ export default async function CandidatePage({ params, searchParams }) {
               </div>
               <div className="row" style={{ gap: 8 }}>
                 <form action={askForSlot}><input type="hidden" name="app_id" value={app.id} /><input type="hidden" name="back" value={back} /><button className="btn sm" type="submit">{screening ? 'Send slot link again' : 'Ask for a call slot'}</button></form>
-                {screening && ['booked', 'no_answer', 'failed', 'requested', 'human_requested'].includes(screening.status) ? (
+                {can(me, 'calls.start') && screening && ['booked', 'no_answer', 'failed', 'requested', 'human_requested'].includes(screening.status) ? (
                   <form action={callNow}><input type="hidden" name="screening_id" value={screening.id} /><button className="btn sm ai" type="submit">Call now</button></form>
                 ) : null}
                 {screening?.recording_url ? <a className="btn sm" href={screening.recording_url} target="_blank" rel="noreferrer">Play recording</a> : null}
@@ -179,7 +183,7 @@ export default async function CandidatePage({ params, searchParams }) {
             </section>
           ) : null}
 
-          {app && app.stage !== 'rejected' ? (
+          {app && app.stage !== 'rejected' && canMoveTo(me, app.stage) ? (
             <form action={moveStage} className="card">
               <h2>Reject with a reason</h2>
               <input type="hidden" name="app_id" value={app.id} /><input type="hidden" name="stage" value="rejected" />

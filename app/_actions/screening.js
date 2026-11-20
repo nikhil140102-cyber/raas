@@ -2,12 +2,12 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { one, setSetting } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requirePerm } from '@/lib/auth';
 import { num } from '@/lib/util';
 import { requestSlot, startCall, finishCall, bookSlot, requestHuman } from '@/lib/screening';
 
 export async function askForSlot(formData) {
-  await requireUser();
+  await requirePerm('calls.request');
   const appId = num(formData.get('app_id'));
   await requestSlot(appId);
   const back = String(formData.get('back') || '/screening');
@@ -16,7 +16,7 @@ export async function askForSlot(formData) {
 }
 
 export async function callNow(formData) {
-  await requireUser();
+  await requirePerm('calls.start');
   let msg = 'Call started.';
   try { await startCall(num(formData.get('screening_id'))); } catch (e) { msg = `Could not start the call: ${e.message}`; }
   revalidatePath('/screening');
@@ -25,7 +25,7 @@ export async function callNow(formData) {
 
 /** Test helper for VOICE_PROVIDER=mock: HR pastes a transcript (or marks no answer). */
 export async function simulateCall(formData) {
-  await requireUser();
+  await requirePerm('calls.start');
   const id = num(formData.get('screening_id'));
   const outcome = String(formData.get('outcome') || 'completed');
   await finishCall(id, { status: outcome, transcript: String(formData.get('transcript') || ''), durationSec: num(formData.get('duration')) || 300 });
@@ -34,7 +34,7 @@ export async function simulateCall(formData) {
 }
 
 export async function saveCallSettings(formData) {
-  await requireUser();
+  await requirePerm('settings.manage');
   await setSetting('call_settings', {
     windowStart: String(formData.get('windowStart') || '10:00'),
     windowEnd: String(formData.get('windowEnd') || '19:00'),

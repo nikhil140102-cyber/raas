@@ -4,6 +4,8 @@ import { Header, Score, Flash } from '@/components/ui';
 import { AutoSelect } from '@/components/client';
 import { STAGES, lakh, notice, SCREENING_STATUS, hoursLeft } from '@/lib/util';
 import { moveStage, bulkAction } from '../../_actions/candidates';
+import { requireUser } from '@/lib/auth';
+import { can, canMoveTo } from '@/lib/roles';
 import MatchRunner from '@/components/MatchRunner';
 import FilterBar from '@/components/FilterBar';
 import { readFilters, candidateWhere, orderBy, activeFilterCount, SORTS } from '@/lib/filters';
@@ -47,7 +49,8 @@ export default async function PipelinePage({ searchParams }) {
 
   const byStage = Object.fromEntries(STAGES.map((s) => [s.id, []]));
   apps.forEach((a) => (byStage[a.stage] || byStage.pending).push(a));
-  const stageOptions = STAGES.map((s) => ({ value: s.id, label: s.label }));
+  const me = await requireUser();
+  const stageOptions = STAGES.filter((s) => canMoveTo(me, s.id)).map((s) => ({ value: s.id, label: s.label }));
 
   return (
     <>
@@ -71,7 +74,7 @@ export default async function PipelinePage({ searchParams }) {
           <span className="small strong" style={{ color: 'var(--ink2)' }}>With ticked candidates:</span>
           <button className="btn sm" type="submit" name="bulk" value="shortlist">Shortlist</button>
           <button className="btn sm" type="submit" name="bulk" value="slot">Ask for AI call slot</button>
-          <button className="btn sm primary" type="submit" name="bulk" value="share">Send to client</button>
+          {can(me, 'clients.share') ? <button className="btn sm primary" type="submit" name="bulk" value="share">Send to client</button> : null}
           <button className="btn sm danger" type="submit" name="bulk" value="reject">Reject</button>
         </div>
         <div className="board-wrap">
@@ -106,7 +109,7 @@ export default async function PipelinePage({ searchParams }) {
                         {a.location ? <span className="tag">{a.location}</span> : null}
                         {tag ? <span className={`pill ${tag[1]}`} style={{ height: 22, fontSize: 11 }}>{tag[0]}</span> : null}
                       </div>
-                      <AutoSelect action={moveStage} name="stage" value={a.stage} options={stageOptions} hidden={{ app_id: a.id }} />
+                      {canMoveTo(me, a.stage) ? <AutoSelect action={moveStage} name="stage" value={a.stage} options={stageOptions} hidden={{ app_id: a.id }} /> : null}
                     </div>
                   );
                 })}

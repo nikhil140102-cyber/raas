@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one, setSetting } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requirePerm } from '@/lib/auth';
 import { num, list } from '@/lib/util';
 import { parseQuestions } from '@/lib/questions';
 import { j } from '@/lib/db';
@@ -10,7 +10,7 @@ import { j } from '@/lib/db';
 const s = (fd, k) => String(fd.get(k) || '').trim() || null;
 
 export async function saveClient(formData) {
-  await requireUser();
+  await requirePerm('clients.edit');
   const id = num(formData.get('id'));
   const vals = [s(formData, 'name'), s(formData, 'cloud'), s(formData, 'city'), num(formData.get('revenue_cr')), s(formData, 'contact_name'), s(formData, 'contact_email'), s(formData, 'contact_phone'), s(formData, 'status') || 'active', s(formData, 'notes'), j(parseQuestions(formData.get('questions')))];
   if (!vals[0]) throw new Error('Client name is required');
@@ -25,7 +25,7 @@ export async function saveClient(formData) {
 }
 
 export async function addProspect(formData) {
-  await requireUser();
+  await requirePerm('clients.edit');
   const name = s(formData, 'name');
   if (!name) return;
   await q('INSERT INTO prospects (name, cloud, city, revenue_cr, signal, source) VALUES ($1,$2,$3,$4,$5,$6)', [name, s(formData, 'cloud'), s(formData, 'city'), num(formData.get('revenue_cr')), s(formData, 'signal'), s(formData, 'source') || 'Manual']);
@@ -34,7 +34,7 @@ export async function addProspect(formData) {
 
 /** CSV columns: name, cloud, city, revenue_cr, signal, source (header row optional). */
 export async function importProspects(formData) {
-  await requireUser();
+  await requirePerm('clients.edit');
   const file = formData.get('file');
   const text = file && typeof file.text === 'function' ? await file.text() : String(formData.get('csv') || '');
   const rows = text.split(/\r?\n/).map((l) => l.split(',').map((c) => c.trim().replace(/^"|"$/g, ''))).filter((r) => r[0]);
@@ -47,7 +47,7 @@ export async function importProspects(formData) {
 }
 
 export async function convertProspect(formData) {
-  await requireUser();
+  await requirePerm('clients.edit');
   const p = await one('SELECT * FROM prospects WHERE id = $1', [num(formData.get('id'))]);
   if (!p) return;
   const c = await one('INSERT INTO clients (name, cloud, city, revenue_cr, status, notes) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id', [p.name, p.cloud, p.city, p.revenue_cr, 'agreement sent', p.signal]);
@@ -57,13 +57,13 @@ export async function convertProspect(formData) {
 }
 
 export async function setProspectStatus(formData) {
-  await requireUser();
+  await requirePerm('clients.edit');
   await q('UPDATE prospects SET status = $2 WHERE id = $1', [num(formData.get('id')), s(formData, 'status')]);
   revalidatePath('/clients');
 }
 
 export async function saveIcp(formData) {
-  await requireUser();
+  await requirePerm('clients.edit');
   await setSetting('icp', {
     clouds: list(formData.get('clouds')),
     country: s(formData, 'country') || 'India',

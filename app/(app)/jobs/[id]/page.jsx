@@ -6,6 +6,9 @@ import { CopyButton, ConfirmButton } from '@/components/client';
 import { PORTALS, expRange, ctcRange, fmtDate } from '@/lib/util';
 import { portalPost, portalUrl, careersUrl } from '@/lib/posting';
 import { markPosted, setJobStatus } from '../../../_actions/jobs';
+import { requireUser } from '@/lib/auth';
+import { can } from '@/lib/roles';
+
 import MatchRunner from '@/components/MatchRunner';
 
 const STATUS = {
@@ -22,6 +25,7 @@ const DETAIL = {
 };
 
 export default async function JobPage({ params, searchParams }) {
+  const me = await requireUser();
   const { id } = await params;
   const sp = await searchParams;
   const job = await one('SELECT j.*, c.name AS client FROM jobs j LEFT JOIN clients c ON c.id = j.client_id WHERE j.id = $1', [Number(id)]);
@@ -39,21 +43,21 @@ export default async function JobPage({ params, searchParams }) {
         title={<div className="row" style={{ gap: 10 }}><h1>{job.title}</h1><Pill tone={job.status === 'open' ? 'green' : 'gray'}>{job.status === 'open' ? 'Open' : 'Closed'}</Pill></div>}
         sub={`${job.location || '—'} · ${job.work_mode} · ${expRange(job.exp_min, job.exp_max)} · ${ctcRange(job.ctc_min, job.ctc_max)} · ${job.openings} opening(s) · ${job.employment_type}${job.joining_timeline ? ` · ${job.joining_timeline}` : ''}`}
       >
-        <Link href={`/jobs/${job.id}/edit`} className="btn">Edit job</Link>
+        {can(me, 'jobs.edit') ? <><Link href={`/jobs/${job.id}/edit`} className="btn">Edit job</Link>
         <form action={setJobStatus}>
           <input type="hidden" name="job_id" value={job.id} />
           <input type="hidden" name="status" value={job.status === 'open' ? 'closed' : 'open'} />
           {job.status === 'open' ? <ConfirmButton message="Close this job? It comes off your careers page right away.">Close job</ConfirmButton> : <button className="btn" type="submit">Reopen job</button>}
-        </form>
+        </form></> : null}
       </Header>
 
       {sp.new ? <div className="notice ok" role="status">Job created and live on your careers page. Resumes already in your database are being scored against it now; strong matches go straight into the pipeline. Next: <Link href={`/jobs/${job.id}/announce`}>post it on LinkedIn, Indeed, Naukri, WhatsApp and more →</Link></div> : null}
       <nav className="subnav" aria-label="Job sections">
         <Link href={`/jobs/${job.id}`} aria-current="page">Publishing</Link>
-        <Link href={`/jobs/${job.id}/announce`}>Post & announce</Link>
+        {can(me, 'jobs.post') ? <Link href={`/jobs/${job.id}/announce`}>Post & announce</Link> : null}
         <Link href={`/pipeline?job=${job.id}`}>Candidates ({total.n})</Link>
         <Link href={`/screening?job=${job.id}`}>AI screening</Link>
-        <Link href={`/jobs/${job.id}/edit`}>Requirement details</Link>
+        {can(me, 'jobs.edit') ? <Link href={`/jobs/${job.id}/edit`}>Requirement details</Link> : null}
       </nav>
 
       <div className="cols">
@@ -81,7 +85,7 @@ export default async function JobPage({ params, searchParams }) {
                   {assisted || p.id === 'social' ? <CopyButton text={post} label="Copy post" /> : null}
                   {portalUrl(p.id) ? <a href={portalUrl(p.id)} target="_blank" rel="noreferrer" className="btn sm">Open {p.name}</a> : null}
                 </div>
-                {assisted ? (
+                {assisted && can(me, 'jobs.post') ? (
                   <form action={markPosted} className="row" style={{ alignItems: 'flex-end', gap: 10 }}>
                     <input type="hidden" name="job_id" value={job.id} />
                     <input type="hidden" name="portal" value={p.id} />

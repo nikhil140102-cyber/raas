@@ -2,20 +2,20 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one, getSetting, setSetting } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requirePerm } from '@/lib/auth';
 import { num } from '@/lib/util';
 import { linkedinPost } from '@/lib/social';
 
 /** Records that HR shared the post somewhere (button click or "Mark as shared"). */
 export async function logShare(jobId, platform, body) {
-  const user = await requireUser();
+  const user = await requirePerm('jobs.post');
   await q(`INSERT INTO social_posts (job_id, platform, body, status, posted_by) VALUES ($1,$2,$3,'shared',$4)`, [Number(jobId), String(platform), String(body || ''), user.id]);
   await q(`UPDATE job_postings SET status = 'posted', posted_at = COALESCE(posted_at, now()), updated_at = now() WHERE job_id = $1 AND portal = 'social'`, [Number(jobId)]);
   revalidatePath(`/jobs/${jobId}/announce`);
 }
 
 export async function postToLinkedIn(formData) {
-  const user = await requireUser();
+  const user = await requirePerm('jobs.post');
   const jobId = num(formData.get('job_id'));
   const text = String(formData.get('body') || '').trim();
   const job = await one('SELECT * FROM jobs WHERE id = $1', [jobId]);
@@ -41,7 +41,7 @@ export async function postToLinkedIn(formData) {
 }
 
 export async function disconnectLinkedIn(formData) {
-  const user = await requireUser();
+  const user = await requirePerm('jobs.post');
   await setSetting(`linkedin:${user.id}`, null);
   redirect(`/jobs/${num(formData.get('job_id'))}/announce?msg=${encodeURIComponent('LinkedIn disconnected.')}`);
 }

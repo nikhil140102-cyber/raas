@@ -3,11 +3,15 @@ import { q, one } from '@/lib/db';
 import { STAGES, fmtDate, hoursLeft, expRange, SCREENING_STATUS } from '@/lib/util';
 import { Header, Kpi, Pill, Flash } from '@/components/ui';
 import { loadSample } from '../_actions/settings';
+import { requireUser } from '@/lib/auth';
+import { can } from '@/lib/roles';
+
 
 export const metadata = { title: 'Dashboard — AvaStars Hire' };
 
 export default async function Dashboard({ searchParams }) {
   const sp = await searchParams;
+  const me = await requireUser();
   const jobs = await one(`SELECT count(*)::int AS n, COALESCE(sum(openings),0)::int AS openings, count(DISTINCT client_id)::int AS clients FROM jobs WHERE status = 'open'`);
   const resumes = await one(`SELECT count(*)::int AS n FROM files WHERE created_at > now() - interval '7 days' AND candidate_id IS NOT NULL`);
   const strong = await one(`SELECT count(DISTINCT candidate_id)::int AS n FROM candidate_scores WHERE scored_at > now() - interval '7 days' AND score >= 70`);
@@ -56,15 +60,15 @@ export default async function Dashboard({ searchParams }) {
         <div className="row">
           <Link href="/resumes" className="btn">Upload resumes</Link>
           <Link href="/pipeline" className="btn">Open pipeline</Link>
-          <Link href="/jobs/new" className="btn light">New requirement</Link>
+          {can(me, 'jobs.edit') ? <Link href="/jobs/new" className="btn light">New requirement</Link> : null}
         </div>
       </section>
 
       <Flash msg={sp.msg} />
-      {jobs.n === 0 ? (
+      {jobs.n === 0 && can(me, 'jobs.edit') ? (
         <form action={loadSample} className="card" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="titles"><h2>Welcome to AvaStars Hire</h2><p className="small muted">Start with a real requirement, or load sample data to try every screen first.</p></div>
-          <div className="row"><button className="btn" type="submit">Load sample data</button><Link href="/jobs/new" className="btn primary">Create first requirement</Link></div>
+          <div className="row">{can(me, 'settings.manage') ? <button className="btn" type="submit">Load sample data</button> : null}<Link href="/jobs/new" className="btn primary">Create first requirement</Link></div>
         </form>
       ) : null}
       <section className="grid-kpi" aria-label="Key numbers">

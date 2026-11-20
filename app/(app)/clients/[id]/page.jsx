@@ -4,16 +4,19 @@ import { q, one } from '@/lib/db';
 import { Header, Pill } from '@/components/ui';
 import { expRange, ctcRange } from '@/lib/util';
 import ClientForm from '../ClientForm';
+import { requireUser } from '@/lib/auth';
+import { can } from '@/lib/roles';
 
 export default async function ClientPage({ params }) {
   const { id } = await params;
+  const me = await requireUser();
   const client = await one('SELECT * FROM clients WHERE id = $1', [Number(id)]);
   if (!client) notFound();
   const jobs = await q(`SELECT j.*, count(a.id) FILTER (WHERE a.stage <> 'rejected')::int AS active FROM jobs j LEFT JOIN applications a ON a.job_id = j.id WHERE j.client_id = $1 GROUP BY j.id ORDER BY j.created_at DESC`, [client.id]);
   return (
     <>
-      <Header title={client.name} sub={[client.cloud, client.city, client.revenue_cr ? `₹${client.revenue_cr} Cr revenue` : null].filter(Boolean).join(' · ')} crumbs={<><Link href="/clients">Clients</Link> / {client.name}</>}>
-        <Link href={`/jobs/new?client=${client.id}`} className="btn primary">New requirement</Link>
+      <Header title={client.name} sub={[client.cloud, client.city, client.revenue_cr && can(me, 'clients.commercials') ? `₹${client.revenue_cr} Cr revenue` : null].filter(Boolean).join(' · ')} crumbs={<><Link href="/clients">Clients</Link> / {client.name}</>}>
+        {can(me, 'jobs.edit') ? <Link href={`/jobs/new?client=${client.id}`} className="btn primary">New requirement</Link> : null}
       </Header>
       <div className="cols">
         <section className="card flush col-main">
@@ -36,7 +39,7 @@ export default async function ClientPage({ params }) {
             </div>
           ) : <div className="empty">No requirements yet.</div>}
         </section>
-        <div className="col-side"><ClientForm client={client} /></div>
+        <div className="col-side">{can(me, 'clients.edit') ? <ClientForm client={client} /> : <section className="card"><h2>Client details</h2><p className="small muted">Client contacts and commercials are managed by HR and admins.</p></section>}</div>
       </div>
     </>
   );

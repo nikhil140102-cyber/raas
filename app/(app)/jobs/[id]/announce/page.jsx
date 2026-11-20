@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { q, one, getSetting } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requirePagePerm } from '@/lib/auth';
 import { Header, Pill, Flash } from '@/components/ui';
 import { CopyButton } from '@/components/client';
 import { fmtDate, appUrl } from '@/lib/util';
@@ -15,6 +15,7 @@ import PostCard from './PostCard';
 export const metadata = { title: 'Announce hiring — AvaStars Hire' };
 
 export default async function AnnouncePage({ params, searchParams }) {
+  await requirePagePerm('jobs.post', '/jobs');
   const { id } = await params;
   const sp = await searchParams;
   const user = await requireUser();

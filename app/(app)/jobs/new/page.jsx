@@ -2,11 +2,13 @@ import Link from 'next/link';
 import { q } from '@/lib/db';
 import { Header } from '@/components/ui';
 import JobForm from '../JobForm';
+import { requirePagePerm } from '@/lib/auth';
 
 export const metadata = { title: 'New requirement — AvaStars Hire' };
 
 export default async function NewJob({ searchParams }) {
   const sp = await searchParams;
+  await requirePagePerm('jobs.edit', '/jobs');
   const clients = await q('SELECT id, name, contact_name, contact_email, contact_phone FROM clients ORDER BY name');
   return (
     <>

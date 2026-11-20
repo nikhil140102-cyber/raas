@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from './Icon';
+import { can, roleOf, roleLabel } from '@/lib/roles';
 
 const NAV = [
   ['/', 'Dashboard', 'home'],
@@ -47,17 +48,17 @@ export default function AppShell({ user, logout, children }) {
           <span className="brand-name">AvaStars <span>Hire</span></span>
         </Link>
         <span className="spacer" />
-        <Link href="/jobs/new" className="btn primary sm topbar-cta"><Icon name="plus" size={16} /> New requirement</Link>
+        {can(user, 'jobs.edit') ? <Link href="/jobs/new" className="btn primary sm topbar-cta"><Icon name="plus" size={16} /> New requirement</Link> : null}
         <a href="/careers" target="_blank" rel="noreferrer" className="iconbtn" title="Open public careers page" aria-label="Open public careers page"><Icon name="globe" /></a>
         <div className="me">
           <span className="avatar" aria-hidden="true">{(user?.name || 'HR').split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}</span>
-          <span className="me-text"><span className="small strong">{user?.name}</span><span className="tiny muted">{user?.email}</span></span>
+          <span className="me-text"><span className="small strong">{user?.name}</span><span className="tiny muted">{roleLabel(roleOf(user))} · {user?.email}</span></span>
           <form action={logout}><button className="iconbtn" type="submit" title="Log out" aria-label="Log out"><Icon name="logout" size={18} /></button></form>
         </div>
       </header>
 
       <nav className="sidenav" aria-label="Main">
-        {NAV.map(([href, label, icon]) => (
+        {NAV.filter(([href]) => href !== '/interviews' || can(user, 'interviews.manage')).map(([href, l, icon]) => [href, href === '/settings' && !can(user, 'settings.manage') ? 'My account' : l, icon]).map(([href, label, icon]) => (
           <Link key={href} href={href} className="navitem" aria-current={active(href) ? 'page' : undefined} title={label}>
             <Icon name={icon} size={20} />
             <span className="navtext">{label}</span>

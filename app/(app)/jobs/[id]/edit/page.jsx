@@ -3,9 +3,11 @@ import { notFound } from 'next/navigation';
 import { q, one } from '@/lib/db';
 import { Header } from '@/components/ui';
 import JobForm from '../../JobForm';
+import { requirePagePerm } from '@/lib/auth';
 
 export default async function EditJob({ params }) {
   const { id } = await params;
+  await requirePagePerm('jobs.edit', '/jobs');
   const job = await one('SELECT * FROM jobs WHERE id = $1', [Number(id)]);
   if (!job) notFound();
   const clients = await q('SELECT id, name, contact_name, contact_email, contact_phone FROM clients ORDER BY name');

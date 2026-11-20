@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one, logActivity } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requirePerm } from '@/lib/auth';
 import { num, fmtDate } from '@/lib/util';
 import { sendEmail } from '@/lib/messages';
 import { interviewIcs } from '@/lib/ics';
@@ -10,7 +10,7 @@ import { interviewIcs } from '@/lib/ics';
 const s = (fd, k) => String(fd.get(k) || '').trim() || null;
 
 export async function scheduleInterview(formData) {
-  await requireUser();
+  await requirePerm('interviews.manage');
   const appId = num(formData.get('app_id'));
   const date = s(formData, 'date'); const time = s(formData, 'time') || '10:00';
   if (!appId || !date) redirect('/interviews?msg=' + encodeURIComponent('Pick a candidate and a date.'));
@@ -38,7 +38,7 @@ export async function scheduleInterview(formData) {
 }
 
 export async function recordOutcome(formData) {
-  await requireUser();
+  await requirePerm('interviews.manage');
   const id = num(formData.get('interview_id'));
   const outcome = s(formData, 'outcome');
   const iv = await one(`UPDATE interviews SET status = 'done', outcome = $2, feedback = $3 WHERE id = $1 RETURNING application_id, round`, [id, outcome, s(formData, 'feedback')]);
@@ -54,7 +54,7 @@ export async function recordOutcome(formData) {
 }
 
 export async function saveOffer(formData) {
-  await requireUser();
+  await requirePerm('offers.manage');
   const appId = num(formData.get('app_id'));
   const status = s(formData, 'status') || 'negotiating';
   await q(

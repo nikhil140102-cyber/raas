@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { q, getSetting } from '@/lib/db';
 import { Header, Pill, Flash } from '@/components/ui';
+import { requireUser, requirePagePerm } from '@/lib/auth';
+import { can } from '@/lib/roles';
 import { addProspect, importProspects, convertProspect, setProspectStatus, saveIcp } from '../../_actions/clients';
 
 export const metadata = { title: 'Clients — AvaStars Hire' };
@@ -19,7 +21,8 @@ function icpFit(p, icp) {
 
 export default async function ClientsPage({ searchParams }) {
   const sp = await searchParams;
-  const tab = sp.tab === 'prospects' ? 'prospects' : 'clients';
+  const me = await requireUser();
+  const tab = sp.tab === 'prospects' && can(me, 'clients.edit') ? 'prospects' : 'clients';
   const search = String(sp.q || '').trim();
   const icp = { ...DEFAULT_ICP, ...(await getSetting('icp', {})) };
   const like = `%${search}%`;
@@ -34,8 +37,9 @@ export default async function ClientsPage({ searchParams }) {
   return (
     <>
       <Header title="Clients" sub="Companies you hire for, and prospects that match your ideal client profile">
-        <Link href="/clients/new" className="btn primary">Add client</Link>
+        {can(me, 'clients.edit') ? <Link href="/clients/new" className="btn primary">Add client</Link> : null}
       </Header>
+      <Flash msg={sp.msg} tone="warn" />
       {sp.imported ? <Flash msg={`${sp.imported} prospect(s) imported.`} /> : null}
 
       <div className="cols">
@@ -43,7 +47,7 @@ export default async function ClientsPage({ searchParams }) {
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <nav className="tabs" aria-label="Client lists">
               <Link href="/clients" aria-current={tab === 'clients' ? 'page' : undefined}>Clients ({counts.clients})</Link>
-              <Link href="/clients?tab=prospects" aria-current={tab === 'prospects' ? 'page' : undefined}>Prospects ({counts.prospects})</Link>
+              {can(me, 'clients.edit') ? <Link href="/clients?tab=prospects" aria-current={tab === 'prospects' ? 'page' : undefined}>Prospects ({counts.prospects})</Link> : null}
             </nav>
             <form className="row" style={{ gap: 8 }}>
               {tab === 'prospects' ? <input type="hidden" name="tab" value="prospects" /> : null}
@@ -58,12 +62,12 @@ export default async function ClientsPage({ searchParams }) {
               {clients.length ? (
                 <div className="tablewrap">
                   <table className="t" style={{ minWidth: 820 }}>
-                    <thead><tr><th>Client</th><th>Cloud</th><th>City</th><th>Revenue</th><th>Open roles</th><th>Avg feedback time</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Client</th><th>Cloud</th><th>City</th>{can(me, 'clients.commercials') ? <th>Revenue</th> : null}<th>Open roles</th><th>Avg feedback time</th><th>Status</th></tr></thead>
                     <tbody>
                       {clients.map((c) => (
                         <tr key={c.id}>
                           <td className="namecell"><Link href={`/clients/${c.id}`}>{c.name}</Link><div>{c.contact_name || 'No contact yet'}</div></td>
-                          <td>{c.cloud || '—'}</td><td>{c.city || '—'}</td><td>{c.revenue_cr ? `₹${c.revenue_cr} Cr` : '—'}</td>
+                          <td>{c.cloud || '—'}</td><td>{c.city || '—'}</td>{can(me, 'clients.commercials') ? <td>{c.revenue_cr ? `₹${c.revenue_cr} Cr` : '—'}</td> : null}
                           <td>{c.open_roles}</td>
                           <td>{c.avg_feedback_h !== null ? `${c.avg_feedback_h}h` : '—'}</td>
                           <td><Pill tone={c.status === 'active' ? (c.avg_feedback_h > 24 ? 'amber' : 'green') : c.status === 'on hold' ? 'gray' : 'blue'}>{c.status === 'active' && c.avg_feedback_h > 24 ? 'Slow feedback' : c.status}</Pill></td>
@@ -109,7 +113,7 @@ export default async function ClientsPage({ searchParams }) {
                   </div>
                 ) : <div className="empty">No prospects yet. Add one below or import a CSV.</div>}
               </div>
-              <div className="cols">
+              {can(me, 'clients.edit') ? <div className="cols">
                 <form action={addProspect} className="card col-main">
                   <h2>Add a prospect</h2>
                   <div className="grid">
@@ -128,13 +132,13 @@ export default async function ClientsPage({ searchParams }) {
                   <label className="field">CSV file<input type="file" name="file" accept=".csv,text/csv" required /></label>
                   <button className="btn" type="submit">Import</button>
                 </form>
-              </div>
+              </div> : null}
             </>
           )}
         </section>
 
         <aside className="col-side">
-          <form action={saveIcp} className="card">
+          {can(me, 'clients.edit') ? <form action={saveIcp} className="card">
             <h2>Ideal client profile</h2>
             <p className="small muted">Prospects are scored against these rules.</p>
             <label className="field">Cloud platforms<input name="clouds" defaultValue={icp.clouds.join(', ')} /></label>
@@ -145,7 +149,7 @@ export default async function ClientsPage({ searchParams }) {
             </div>
             <label className="field">Focus cities<textarea name="cities" rows={2} defaultValue={icp.cities.join(', ')} /></label>
             <button className="btn" type="submit">Save profile</button>
-          </form>
+          </form> : null}
         </aside>
       </div>
     </>

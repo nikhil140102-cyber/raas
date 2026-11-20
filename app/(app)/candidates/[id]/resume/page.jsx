@@ -5,8 +5,10 @@ import { Header, Flash } from '@/components/ui';
 import { SubmitButton } from '@/components/client';
 import { resumeModel } from '@/lib/resumeExport';
 import { saveClientResume, resetClientResume } from '../../../../_actions/candidates';
+import { requirePagePerm } from '@/lib/auth';
 
 export default async function ResumeEditor({ params, searchParams }) {
+  await requirePagePerm('clients.share', '/resumes');
   const { id } = await params;
   const sp = await searchParams;
   const c = await one('SELECT * FROM candidates WHERE id = $1', [Number(id)]);

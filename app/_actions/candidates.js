@@ -2,7 +2,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one, j, logActivity } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requirePerm } from '@/lib/auth';
+import { can, canMoveTo, AccessError } from '@/lib/roles';
 import { num, list, stageLabel, STAGES, token, appUrl } from '@/lib/util';
 import { addToJob } from '@/lib/ingest';
 import { requestSlot } from '@/lib/screening';
@@ -11,11 +12,13 @@ import { sendEmail } from '@/lib/messages';
 const s = (fd, k) => String(fd.get(k) || '').trim() || null;
 
 export async function moveStage(formData) {
-  await requireUser();
+  await requirePerm('pipeline.move');
   const appId = num(formData.get('app_id'));
   const stage = s(formData, 'stage');
   if (!STAGES.some((x) => x.id === stage)) return;
   const reason = s(formData, 'reason');
+  const me = await requireUser();
+  if (!canMoveTo(me, stage)) throw new AccessError(me, stage === 'selected' ? 'offers.manage' : stage === 'interview' ? 'interviews.manage' : 'clients.share');
   const app = await one('UPDATE applications SET stage = $2, reject_reason = CASE WHEN $2 = $4 THEN COALESCE($3, reject_reason) ELSE reject_reason END, updated_at = now() WHERE id = $1 RETURNING *', [appId, stage, reason, 'rejected']);
   if (!app) return;
   if (stage === 'selected') await q('INSERT INTO offers (application_id) VALUES ($1) ON CONFLICT DO NOTHING', [appId]);
@@ -26,9 +29,11 @@ export async function moveStage(formData) {
 
 /** Bulk buttons on the pipeline board. */
 export async function bulkAction(formData) {
-  await requireUser();
+  const me = await requireUser();
   const ids = formData.getAll('app').map(Number).filter(Boolean);
   const action = s(formData, 'bulk');
+  const need = { shortlist: 'pipeline.move', reject: 'pipeline.move', slot: 'calls.request', share: 'clients.share' }[action];
+  if (need && !can(me, need)) throw new AccessError(me, need);
   const jobId = num(formData.get('job_id'));
   if (!ids.length) redirect(`/pipeline?job=${jobId}&msg=${encodeURIComponent('Tick at least one candidate first.')}`);
   let msg = '';
@@ -74,7 +79,7 @@ async function shareWithClient(jobId, appIds) {
 }
 
 export async function shareOne(formData) {
-  await requireUser();
+  await requirePerm('clients.share');
   const appId = num(formData.get('app_id'));
   const app = await one('SELECT * FROM applications WHERE id = $1', [appId]);
   await shareWithClient(app.job_id, [appId]);
@@ -82,7 +87,7 @@ export async function shareOne(formData) {
 }
 
 export async function updateCandidate(formData) {
-  await requireUser();
+  await requirePerm('candidates.edit');
   const id = num(formData.get('id'));
   await q(
     `UPDATE candidates SET name = COALESCE($2, name), email = $3, phone = $4, current_title = $5, current_company = $6, location = $7, total_exp = $8, cctc = $9, ectc = $10, notice_days = $11, availability = $12, skills = $13::jsonb, updated_at = now() WHERE id = $1`,
@@ -93,7 +98,7 @@ export async function updateCandidate(formData) {
 }
 
 export async function addCandidateToJob(formData) {
-  await requireUser();
+  await requirePerm('candidates.edit');
   const cid = num(formData.get('candidate_id'));
   const jobId = num(formData.get('job_id'));
   const { applicationId } = await addToJob(jobId, cid, 'Added by HR');
@@ -104,14 +109,14 @@ export async function addCandidateToJob(formData) {
 }
 
 export async function rescore(formData) {
-  await requireUser();
+  await requirePerm('candidates.edit');
   const app = await one('SELECT * FROM applications WHERE id = $1', [num(formData.get('app_id'))]);
   await addToJob(app.job_id, app.candidate_id, app.source);
   revalidatePath(`/candidates/${app.candidate_id}`);
 }
 
 export async function saveClientResume(formData) {
-  await requireUser();
+  await requirePerm('clients.share');
   const id = num(formData.get('id'));
   const roles = formData.getAll('exp_role'); const whens = formData.getAll('exp_when'); const points = formData.getAll('exp_points');
   const resume = {
@@ -128,14 +133,14 @@ export async function saveClientResume(formData) {
 }
 
 export async function resetClientResume(formData) {
-  await requireUser();
+  await requirePerm('clients.share');
   const id = num(formData.get('id'));
   await q('UPDATE candidates SET client_resume = NULL WHERE id = $1', [id]);
   redirect(`/candidates/${id}/resume?app=${formData.get('app') || ''}`);
 }
 
 export async function deleteCandidate(formData) {
-  await requireUser();
+  await requirePerm('candidates.delete');
   await q('DELETE FROM candidates WHERE id = $1', [num(formData.get('id'))]);
   revalidatePath('/resumes');
   redirect('/resumes?msg=' + encodeURIComponent('Candidate deleted.'));

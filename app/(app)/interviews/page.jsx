@@ -3,12 +3,14 @@ import { q } from '@/lib/db';
 import { Header, Pill, Flash } from '@/components/ui';
 import { fmtDate, lakh, hoursLeft, REJECT_REASONS } from '@/lib/util';
 import { scheduleInterview, recordOutcome, saveOffer } from '../../_actions/interviews';
+import { requirePagePerm } from '@/lib/auth';
 
 export const metadata = { title: 'Interviews & offers — AvaStars Hire' };
 const OFFER_STATUS = { negotiating: 'amber', offered: 'blue', accepted: 'green', joined: 'indigo', dropped: 'red' };
 
 export default async function InterviewsPage({ searchParams }) {
   const sp = await searchParams;
+  await requirePagePerm('interviews.manage', '/');
   const upcoming = await q(`
     SELECT i.*, c.name, c.id AS cid, jb.title, cl.name AS client FROM interviews i
     JOIN applications a ON a.id = i.application_id JOIN candidates c ON c.id = a.candidate_id JOIN jobs jb ON jb.id = a.job_id LEFT JOIN clients cl ON cl.id = jb.client_id

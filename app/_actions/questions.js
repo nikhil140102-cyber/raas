@@ -2,14 +2,14 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one, j, getSetting, setSetting } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requirePerm } from '@/lib/auth';
 import { num } from '@/lib/util';
 import { parseQuestions, mergeQuestions, questionSets } from '@/lib/questions';
 
 const back = (jobId, msg) => redirect(`/screening?job=${jobId}&msg=${encodeURIComponent(msg)}#questions`);
 
 export async function saveJobQuestions(formData) {
-  await requireUser();
+  await requirePerm('questions.edit');
   const jobId = num(formData.get('job_id'));
   await q('UPDATE jobs SET screening_questions = $2::jsonb WHERE id = $1', [jobId, j(parseQuestions(formData.get('questions')))]);
   revalidatePath('/screening');
@@ -17,7 +17,7 @@ export async function saveJobQuestions(formData) {
 }
 
 export async function addSetToJob(formData) {
-  await requireUser();
+  await requirePerm('questions.edit');
   const jobId = num(formData.get('job_id'));
   const set = (await questionSets()).find((s) => s.name === formData.get('set'));
   if (!set) back(jobId, 'Pick a question set first.');
@@ -28,7 +28,7 @@ export async function addSetToJob(formData) {
 }
 
 export async function saveSetFromJob(formData) {
-  await requireUser();
+  await requirePerm('questions.edit');
   const jobId = num(formData.get('job_id'));
   const name = String(formData.get('name') || '').trim();
   const job = await one('SELECT screening_questions FROM jobs WHERE id = $1', [jobId]);
@@ -40,7 +40,7 @@ export async function saveSetFromJob(formData) {
 }
 
 export async function deleteSet(formData) {
-  await requireUser();
+  await requirePerm('questions.edit');
   const jobId = num(formData.get('job_id'));
   const name = String(formData.get('name') || '');
   await setSetting('question_sets', (await getSetting('question_sets', [])).filter((s) => s.name !== name));

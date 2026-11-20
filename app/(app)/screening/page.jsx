@@ -6,6 +6,8 @@ import { providerName, buildScript } from '@/lib/voice';
 import { callSettings } from '@/lib/screening';
 import { callNow, simulateCall, askForSlot } from '../../_actions/screening';
 import { saveJobQuestions, addSetToJob, saveSetFromJob, deleteSet } from '../../_actions/questions';
+import { requireUser } from '@/lib/auth';
+import { can } from '@/lib/roles';
 import { callQuestions, formatQuestions, questionSets } from '@/lib/questions';
 
 export const metadata = { title: 'AI screening — AvaStars Hire' };
@@ -14,6 +16,7 @@ const TONE = { requested: 'gray', booked: 'indigo', calling: 'blue', completed: 
 
 export default async function ScreeningPage({ searchParams }) {
   const sp = await searchParams;
+  const me = await requireUser();
   const jobId = Number(sp.job) || null;
   const provider = providerName();
   const settings = await callSettings();
@@ -50,7 +53,7 @@ export default async function ScreeningPage({ searchParams }) {
         <Kpi icon="sparkles" tone="indigo" label="Slot requests sent" value={k.sent} /><Kpi icon="calendar" tone="blue" label="Slots booked" value={k.booked} /><Kpi icon="phone" tone="green" label="Calls completed" value={k.done} /><Kpi icon="sparkles" tone="violet" label="Average call score" value={k.avg ?? '—'} />
       </section>
 
-      {scriptJob ? (
+      {scriptJob && can(me, 'questions.edit') ? (
         <section id="questions" className="card" style={{ gap: 18 }}>
           <div className="header">
             <div className="titles"><h2>Call questions · {scriptJob.title}</h2><p className="small muted">Each job has its own questions. The client&apos;s standard questions are added after them. Pick another job at the top to edit its questions.</p></div>
@@ -146,8 +149,8 @@ export default async function ScreeningPage({ searchParams }) {
                         <td>
                           <div className="row" style={{ gap: 6 }}>
                             {r.status === 'completed' ? <Link className="btn sm" href={`/candidates/${r.cid}?app=${r.application_id}`}>View result</Link> : null}
-                            {['booked', 'no_answer', 'failed', 'requested', 'human_requested'].includes(r.status) ? <form action={callNow}><input type="hidden" name="screening_id" value={r.id} /><button className="btn sm ai" type="submit">Call now</button></form> : null}
-                            {provider === 'mock' && r.status === 'calling' ? (
+                            {can(me, 'calls.start') && ['booked', 'no_answer', 'failed', 'requested', 'human_requested'].includes(r.status) ? <form action={callNow}><input type="hidden" name="screening_id" value={r.id} /><button className="btn sm ai" type="submit">Call now</button></form> : null}
+                            {can(me, 'calls.start') && provider === 'mock' && r.status === 'calling' ? (
                               <details>
                                 <summary className="btn sm">Simulate call</summary>
                                 <form action={simulateCall} className="stack card" style={{ position: 'absolute', zIndex: 5, width: 420, marginTop: 6, boxShadow: '0 8px 24px rgba(16,24,40,.12)' }}>

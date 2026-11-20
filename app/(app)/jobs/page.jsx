@@ -5,8 +5,13 @@ import { expRange, ctcRange, fmtDate } from '@/lib/util';
 
 export const metadata = { title: 'Jobs — AvaStars Hire' };
 
+import { requireUser } from '@/lib/auth';
+import { can } from '@/lib/roles';
+import { Flash as FlashMsg } from '@/components/ui';
+
 export default async function JobsPage({ searchParams }) {
   const sp = await searchParams;
+  const me = await requireUser();
   const status = sp.status === 'closed' ? 'closed' : 'open';
   const jobs = await q(`
     SELECT j.*, c.name AS client,
@@ -18,8 +23,9 @@ export default async function JobsPage({ searchParams }) {
   return (
     <>
       <Header title="Jobs & posting" sub="Every requirement, and where it is posted">
-        <Link href="/jobs/new" className="btn primary">New requirement</Link>
+        {can(me, 'jobs.edit') ? <Link href="/jobs/new" className="btn primary">New requirement</Link> : null}
       </Header>
+      <FlashMsg msg={sp.msg} tone="warn" />
       <nav className="tabs" aria-label="Job status">
         <Link href="/jobs" aria-current={status === 'open' ? 'page' : undefined}>Open</Link>
         <Link href="/jobs?status=closed" aria-current={status === 'closed' ? 'page' : undefined}>Closed</Link>

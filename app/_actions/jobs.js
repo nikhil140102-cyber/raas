@@ -2,7 +2,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one, j } from '@/lib/db';
-import { requireUser } from '@/lib/auth';
+import { requireUser, requirePerm } from '@/lib/auth';
 import { num, list, slugify, token, PORTALS } from '@/lib/util';
 import { draftJD, suggestQuestions, extractJD, readDocumentWithAI } from '@/lib/ai';
 import { extractText, cleanText } from '@/lib/ingest';
@@ -43,7 +43,7 @@ function jobFromForm(fd) {
 }
 
 export async function saveJob(formData) {
-  await requireUser();
+  await requirePerm('jobs.edit');
   const id = num(formData.get('id'));
   const v = jobFromForm(formData);
   if (!v.title) throw new Error('Job title is required');
@@ -77,32 +77,32 @@ export async function saveJob(formData) {
 
 /** Used by the intake form's AI buttons. Returns plain data to the client component. */
 export async function aiDraftDescription(fields) {
-  await requireUser();
+  await requirePerm('jobs.edit');
   return draftJD({ ...fields, mandatory_skills: list(fields.mandatory_skills), preferred_skills: list(fields.preferred_skills) });
 }
 
 export async function aiSuggestQuestions(fields) {
-  await requireUser();
+  await requirePerm('jobs.edit');
   const qs = await suggestQuestions({ ...fields, mandatory_skills: list(fields.mandatory_skills) });
   return qs.map((x) => `${x.q} | ${x.type}`).join('\n');
 }
 
 export async function markPosted(formData) {
-  await requireUser();
+  await requirePerm('jobs.post');
   const jobId = num(formData.get('job_id'));
   await q(`UPDATE job_postings SET status = 'posted', url = $3, posted_at = COALESCE(posted_at, now()), updated_at = now() WHERE job_id = $1 AND portal = $2`, [jobId, s(formData, 'portal'), s(formData, 'url')]);
   revalidatePath(`/jobs/${jobId}`);
 }
 
 export async function setPostingStatus(formData) {
-  await requireUser();
+  await requirePerm('jobs.post');
   const jobId = num(formData.get('job_id'));
   await q('UPDATE job_postings SET status = $3, updated_at = now() WHERE job_id = $1 AND portal = $2', [jobId, s(formData, 'portal'), s(formData, 'status')]);
   revalidatePath(`/jobs/${jobId}`);
 }
 
 export async function setJobStatus(formData) {
-  await requireUser();
+  await requirePerm('jobs.edit');
   const jobId = num(formData.get('job_id'));
   const status = s(formData, 'status');
   await q(`UPDATE jobs SET status = $2, closed_at = CASE WHEN $2 = 'closed' THEN now() ELSE NULL END WHERE id = $1`, [jobId, status]);
@@ -113,7 +113,7 @@ export async function setJobStatus(formData) {
 
 /** JD import: reads an uploaded file or pasted text and returns form fields. */
 export async function importJD(formData) {
-  await requireUser();
+  await requirePerm('jobs.edit');
   let text = cleanText(formData.get('text')).trim();
   const file = formData.get('file');
   if (file && typeof file.arrayBuffer === 'function' && file.size > 0) {

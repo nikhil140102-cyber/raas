@@ -2,7 +2,7 @@
 // Compact by design: one search row; everything else sits under "More filters".
 // With columnFilters, the per-column filters live in the table header (they submit this form via form="…").
 import Link from 'next/link';
-import { activeFilterCount } from '@/lib/filters';
+import { SORTS, activeFilterCount } from '@/lib/filters';
 
 export default function FilterBar({ base, f, jobs = [], jobId, showJobPicker = false, jobLabel = 'Match % for job', keep = {}, defaultSort = 'match', id = 'filters', columnFilters = false }) {
   const count = activeFilterCount(f);
@@ -13,8 +13,7 @@ export default function FilterBar({ base, f, jobs = [], jobId, showJobPicker = f
   return (
     <form id={id} className="filters compact" aria-label="Filters">
       {Object.entries(keep).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />)}
-      <input type="hidden" name="sort" value={f.sort || defaultSort} />
-      <input type="hidden" name="dir" value={f.dir} />
+      {columnFilters ? <><input type="hidden" name="sort" value={f.sort || defaultSort} /><input type="hidden" name="dir" value={f.dir} /></> : null}
       <div className="filters-row">
         <input className="grow" type="search" name="q" defaultValue={f.q} placeholder="Search skills, title, name or resume text…" aria-label="Search" />
         {showJobPicker ? (
@@ -22,6 +21,12 @@ export default function FilterBar({ base, f, jobs = [], jobId, showJobPicker = f
             <option value="">Match %: best of any job</option>
             {jobs.map((j) => <option key={j.id} value={j.id}>Match %: {j.title}</option>)}
           </select>
+        ) : null}
+        {!columnFilters ? (
+          <>
+            <select name="sort" defaultValue={f.sort || defaultSort} aria-label="Sort by">{Object.entries(SORTS).map(([k, v]) => <option key={k} value={k}>Sort: {v.label}</option>)}</select>
+            <select name="dir" defaultValue={f.dir} aria-label="Order"><option value="desc">High → low</option><option value="asc">Low → high</option></select>
+          </>
         ) : null}
         <button className="btn primary sm" type="submit">Apply</button>
         {count ? <Link className="btn sm" href={clearHref}>Clear ({count})</Link> : null}
