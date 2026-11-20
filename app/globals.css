@@ -281,3 +281,7 @@ tr.colfilters select.colf { min-width: 88px; }
 .bulkbar select { width: auto; min-height: 34px; height: 34px; font-size: 13.5px; max-width: 340px; }
 .bulkbar.on { background: var(--accent-soft, #EEF0FF); }
 input.tick { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+
+/* ---- v4.9: never scroll the whole page sideways; wide boards and tables scroll inside their own box ---- */
+html, body { overflow-x: clip; max-width: 100%; }
+.content > * { min-width: 0; max-width: 100%; }

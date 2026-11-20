@@ -1,3 +1,6 @@
+AvaStars Hire v4.9 (patch 14)
+- No more page-wide horizontal scrollbar; the pipeline board scrolls inside its own box
+
 AvaStars Hire v4.8 (patch 13)
 - Indeed / Naukri 'Mark as posted' now always saves and appears in Share history with a View job link
 
