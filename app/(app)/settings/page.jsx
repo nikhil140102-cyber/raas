@@ -1,6 +1,6 @@
 import { q } from '@/lib/db';
 import { Header, Pill, Flash } from '@/components/ui';
-import { fmtDate, appUrl } from '@/lib/util';
+import { fmtDate, appUrl, appUrlProblem } from '@/lib/util';
 import { callSettings } from '@/lib/screening';
 import { providerName } from '@/lib/voice';
 import { aiEnabled } from '@/lib/ai';
@@ -35,6 +35,7 @@ export default async function SettingsPage({ searchParams }) {
     <>
       <Header title="Settings" sub="Integrations, call rules, users and the message outbox" />
       <Flash msg={sp.msg} />
+      {appUrlProblem() ? <div className="notice warn" role="alert"><strong>APP_URL needs fixing.</strong> {appUrlProblem()}</div> : null}
       <UsersAndRoles users={users} me={me} sp={sp} />
       <div className="cols">
         <section className="col-main">

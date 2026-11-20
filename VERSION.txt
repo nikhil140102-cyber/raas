@@ -1,3 +1,10 @@
+AvaStars Hire v4.6 (patch 11)
+- Announce page: each platform card opens and closes (LinkedIn open by default)
+- Search-friendly posts: keyword first line, role/city/skill hashtags; 3 Facebook and 4 Instagram styles
+- Shared links carry utm_source, so applications show 'Careers page · Facebook' etc.
+- Safety: APP_URL must be a web address; a wrong value is ignored and flagged
+- Job pages: better search titles and descriptions
+
 AvaStars Hire v4.5 (patch 10)
 - Resume database: upload panel opens from an 'Upload resumes' button
 - Imports / Match % / Missing details boxes in three columns

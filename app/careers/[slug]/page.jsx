@@ -14,18 +14,23 @@ export async function generateMetadata({ params }) {
   const job = await one('SELECT * FROM jobs WHERE slug = $1', [slug]);
   if (!job) return { title: 'Job not found' };
   const title = `We're hiring: ${job.title}`;
-  const description = [job.location && `${job.location} (${job.work_mode})`, (job.exp_min || job.exp_max) ? expRange(job.exp_min, job.exp_max) : null, job.ctc_min || job.ctc_max ? `${ctcRange(job.ctc_min, job.ctc_max)} per year` : null, 'Apply in 2 minutes.'].filter(Boolean).join(' · ');
+  const city = String(job.location || '').replace(/\(.*?\)/g, '').split(/[,/]/)[0].trim();
+  const exp = job.exp_min || job.exp_max ? expRange(job.exp_min, job.exp_max) : null;
+  const skills = (job.mandatory_skills || []).slice(0, 4).join(', ');
+  const description = [`${job.title} job${city ? ` in ${city}` : ''} (${job.work_mode})`, exp, job.ctc_min || job.ctc_max ? `${ctcRange(job.ctc_min, job.ctc_max)} per year` : null, skills && `Skills: ${skills}`, 'Apply online in 2 minutes.'].filter(Boolean).join(' · ').slice(0, 300);
   return {
-    title: `${job.title} — ${job.location} | AvaStars Careers`,
+    title: `${job.title} Job${city ? ` in ${city}` : ''}${exp ? ` (${exp})` : ''} | ${job.public_company || 'AvaStars'} Careers`,
     description,
+    keywords: [job.title, `${job.title} jobs`, city && `jobs in ${city}`, city && `${job.title} jobs in ${city}`, ...(job.mandatory_skills || [])].filter(Boolean),
     alternates: { canonical: careersUrl(job) },
     openGraph: { type: 'website', url: careersUrl(job), title, description, siteName: 'AvaStars Careers' },
     twitter: { card: 'summary_large_image', title, description },
   };
 }
 
-export default async function JobPublicPage({ params }) {
+export default async function JobPublicPage({ params, searchParams }) {
   const { slug } = await params;
+  const via = String((await searchParams)?.utm_source || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 20);
   const job = await one('SELECT * FROM jobs WHERE slug = $1', [slug]);
   if (!job) notFound();
   const open = job.status === 'open';
@@ -47,7 +52,7 @@ export default async function JobPublicPage({ params }) {
           {(job.preferred_certs || []).length ? <p><strong>Preferred certifications:</strong> {job.preferred_certs.join(', ')}</p> : null}
         </section>
         {open ? <ShareJob url={careersUrl(job)} title={job.title} /> : null}
-        {open ? <ApplyForm jobId={job.id} title={job.title} /> : null}
+        {open ? <ApplyForm jobId={job.id} title={job.title} via={via} /> : null}
       </main>
     </div>
   );

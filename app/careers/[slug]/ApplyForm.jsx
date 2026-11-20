@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-export default function ApplyForm({ jobId, title }) {
+export default function ApplyForm({ jobId, title, via = '' }) {
   const [state, setState] = useState({ status: 'idle' });
 
   async function submit(e) {
@@ -28,6 +28,7 @@ export default function ApplyForm({ jobId, title }) {
 
   return (
     <form onSubmit={submit} className="card" style={{ gap: 14 }} noValidate>
+      {via ? <input type="hidden" name="via" value={via} /> : null}
       <h2>Apply in 2 minutes</h2>
       <div className="grid">
         <label className="field">Full name *<input name="name" required autoComplete="name" /></label>

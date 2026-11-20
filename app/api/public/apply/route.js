@@ -17,6 +17,9 @@ function limited(ip) {
   return arr.length > 8;
 }
 
+// Where the applicant clicked the link (from the ?utm_source= on shared links).
+const SOURCE_NAMES = { linkedin: 'LinkedIn', facebook: 'Facebook', instagram: 'Instagram', whatsapp: 'WhatsApp', x: 'X', telegram: 'Telegram', indeed: 'Indeed', naukri: 'Naukri' };
+
 export async function POST(req) {
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || 'local';
   if (limited(ip)) return NextResponse.json({ error: 'Too many applications from this connection. Try again later.' }, { status: 429 });
@@ -34,7 +37,7 @@ export async function POST(req) {
     buffer: Buffer.from(await file.arrayBuffer()),
     filename: file.name,
     mime: file.type,
-    source: 'Careers page',
+    source: SOURCE_NAMES[String(fd.get('via') || '')] ? `Careers page · ${SOURCE_NAMES[String(fd.get('via'))]}` : 'Careers page',
     jobId: job.id,
     overrides: {
       name: String(fd.get('name') || '').trim() || null,

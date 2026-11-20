@@ -4,8 +4,8 @@ import { q, one, getSetting } from '@/lib/db';
 import { requireUser, requirePagePerm } from '@/lib/auth';
 import { Header, Pill, Flash } from '@/components/ui';
 import { CopyButton } from '@/components/client';
-import { fmtDate, appUrl } from '@/lib/util';
-import { careersUrl } from '@/lib/posting';
+import { fmtDate, appUrl, appUrlProblem } from '@/lib/util';
+import { careersUrl, trackedUrl } from '@/lib/posting';
 import { PLATFORMS, buildPosts, shareLinks, linkedinConfigured, portalKit } from '@/lib/social';
 import { markPosted } from '../../../../_actions/jobs';
 import PortalKit from './PortalKit';
@@ -46,6 +46,7 @@ export default async function AnnouncePage({ params, searchParams }) {
       </nav>
       <Flash msg={sp.msg} tone={/fail|first|empty|expired/i.test(String(sp.msg || '')) ? 'warn' : 'ok'} />
       {job.status !== 'open' ? <div className="notice warn">This job is closed, so the apply page shows it as closed. Reopen it before sharing.</div> : null}
+      {appUrlProblem() ? <div className="notice warn" role="alert"><strong>Check APP_URL in Vercel.</strong> {appUrlProblem()}</div> : null}
       {local ? (
         <div className="notice warn">
           The apply link is <strong>{link}</strong>. That only works on this computer. Put the app online (or start a temporary public link, see the README) and set APP_URL to the public address so shared links work for everyone.
@@ -56,7 +57,7 @@ export default async function AnnouncePage({ params, searchParams }) {
         <section className="col-main">
           <h2>Social media posts</h2>
           {PLATFORMS.map((p) => (
-            <PostCard key={p.id} jobId={job.id} platform={p.id} name={p.name} hint={p.hint} samples={posts[p.id]} shareUrl={links[p.id]} link={link}>
+            <PostCard key={p.id} jobId={job.id} platform={p.id} name={p.name} hint={p.hint} samples={posts[p.id]} shareUrl={links[p.id]} link={trackedUrl(job, p.id)} defaultOpen={p.id === 'linkedin'}>
               {p.id === 'linkedin' && connected ? (
                 <form id="li-form-linkedin" action={postToLinkedIn}>
                   <input type="hidden" name="job_id" value={job.id} />

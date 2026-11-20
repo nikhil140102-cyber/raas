@@ -3,7 +3,8 @@ import { useState, useTransition } from 'react';
 import { logShare } from '../../../../_actions/social';
 
 /** One platform: sample styles to pick from, editable text, copy, share button and "mark as shared". */
-export default function PostCard({ jobId, platform, name, hint, samples, shareUrl, link, children }) {
+export default function PostCard({ jobId, platform, name, hint, samples, shareUrl, link, defaultOpen = false, children }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [pick, setPick] = useState(0);
   const [text, setText] = useState(samples[0]?.text || '');
   const [note, setNote] = useState('');
@@ -21,7 +22,15 @@ export default function PostCard({ jobId, platform, name, hint, samples, shareUr
 
   return (
     <article className="card" style={{ gap: 12 }}>
-      <div className="titles"><h2>{name}</h2><p className="small muted">{hint}</p></div>
+      <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap', alignItems: 'flex-start' }}>
+        <button type="button" className="titles" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={`post-${platform}`} style={{ all: 'unset', cursor: 'pointer', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <h2>{name}</h2><p className="small muted">{hint}</p>
+        </button>
+        <button type="button" className="btn sm" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls={`post-${platform}`} aria-label={`${open ? 'Close' : 'Open'} ${name} post`}>
+          {open ? 'Close ▴' : 'Open ▾'}
+        </button>
+      </div>
+      {open ? <div id={`post-${platform}`} className="stack" style={{ gap: 12 }}>
       {samples.length > 1 ? (
         <div className="row" role="radiogroup" aria-label={`${name} sample posts`} style={{ gap: 6 }}>
           <span className="tiny strong muted">Sample:</span>
@@ -46,6 +55,7 @@ export default function PostCard({ jobId, platform, name, hint, samples, shareUr
       </div>
       {platform === 'linkedin' || platform === 'facebook' ? <span className="tiny muted">{name} only takes the link, so the text is copied for you: paste it into the post box that opens.</span> : null}
       {note ? <span className="small" style={{ color: 'var(--green)' }} role="status">{note}</span> : null}
+      </div> : null}
     </article>
   );
 }
