@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { SESSION_COOKIE, verifySession } from './lib/session';
 
 // Pages and APIs that do not need an HR login.
-const PUBLIC = ['/login', '/careers', '/share', '/book', '/api/public', '/api/webhooks', '/api/cron', '/_next', '/favicon'];
+const PUBLIC = ['/login', '/careers', '/share', '/book', '/api/public', '/api/inbound', '/api/webhooks', '/api/cron', '/_next', '/favicon'];
 
 export async function middleware(req) {
   const { pathname } = req.nextUrl;

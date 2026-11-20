@@ -48,6 +48,13 @@ export default async function SettingsPage({ searchParams }) {
             ))}
             <p className="tiny muted">Voice webhook URL for your provider: {appUrl(`/api/webhooks/voice/${providerName()}?secret=…`)}</p>
           </section>
+          <section id="inbound" className="card">
+            <h2>Inbound Candidate API</h2>
+            <p className="small muted">Lets Zapier, Make, n8n, Google Forms, your website or partners add candidates automatically. Each one is read, scored and placed on the board like any upload.</p>
+            <div className="row" style={{ gap: 8 }}><Pill tone={process.env.INBOUND_API_KEY ? 'green' : 'gray'}>{process.env.INBOUND_API_KEY ? 'On' : 'Off: set INBOUND_API_KEY'}</Pill></div>
+            <label className="field">Address (POST)<input readOnly value={appUrl('/api/inbound/candidate')} /></label>
+            <p className="tiny muted" style={{ margin: 0 }}>Header: <code>Authorization: Bearer YOUR_INBOUND_API_KEY</code>. Send form-data (fields + a <code>resume</code> file) or JSON (fields + <code>resume_base64</code>, <code>resume_filename</code>). Fields: <code>name, email, phone, location, job_id</code> or <code>job_slug, source, notes</code>. Without a resume, name plus email or phone creates a basic profile.</p>
+          </section>
           <section className="card flush">
             <div className="card-head"><h2>Outbox</h2><span className="small muted">Last 25 messages</span></div>
             {outbox.length ? (
