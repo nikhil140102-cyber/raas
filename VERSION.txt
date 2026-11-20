@@ -1,3 +1,6 @@
+AvaStars Hire v4.7 (patch 12)
+- Announce page: X, Facebook and Instagram cards removed (LinkedIn, WhatsApp, Telegram stay)
+
 AvaStars Hire v4.6 (patch 11)
 - Announce page: each platform card opens and closes (LinkedIn open by default)
 - Search-friendly posts: keyword first line, role/city/skill hashtags; 3 Facebook and 4 Instagram styles
