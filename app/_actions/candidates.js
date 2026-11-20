@@ -145,3 +145,35 @@ export async function deleteCandidate(formData) {
   revalidatePath('/resumes');
   redirect('/resumes?msg=' + encodeURIComponent('Candidate deleted.'));
 }
+
+/** Resume database: put the ticked candidates into one job's pipeline (Pending or Shortlisted), whatever their match %. */
+export async function addSelectedToJob(formData) {
+  const me = await requirePerm('candidates.edit');
+  const ids = [...new Set(formData.getAll('cand').map(Number).filter(Boolean))];
+  const jobId = num(formData.get('job_id'));
+  const stage = ['pending', 'shortlisted'].includes(formData.get('stage')) ? String(formData.get('stage')) : 'pending';
+  const back = String(formData.get('back') || '/resumes');
+  const go = (msg) => redirect(`${back}${back.includes('?') ? '&' : '?'}msg=${encodeURIComponent(msg)}`);
+  if (!jobId) go('Choose a job first.');
+  if (!ids.length) go('Tick at least one candidate first.');
+  if (!canMoveTo(me, stage)) throw new AccessError(me, 'pipeline.move');
+  const job = await one('SELECT j.title, c.name AS client FROM jobs j LEFT JOIN clients c ON c.id = j.client_id WHERE j.id = $1', [jobId]);
+  if (!job) go('That job no longer exists.');
+  let added = 0; let moved = 0; let kept = 0;
+  for (const cid of ids) {
+    const before = await one('SELECT id, stage, reject_reason FROM applications WHERE job_id = $1 AND candidate_id = $2', [jobId, cid]);
+    const { applicationId } = await addToJob(jobId, cid, 'Added by HR');
+    const after = await one('SELECT stage, reject_reason FROM applications WHERE id = $1', [applicationId]);
+    // Candidates HR already moved further (screening, client, interview…) stay where they are.
+    const movable = after.stage === 'pending' || (after.stage === 'rejected' && /^Low match/.test(after.reject_reason || '')) || (stage === 'shortlisted' && after.stage === 'pending');
+    if (movable && after.stage !== stage) {
+      await q('UPDATE applications SET stage = $2, reject_reason = NULL, updated_at = now() WHERE id = $1', [applicationId, stage]);
+      await logActivity(cid, applicationId, `Added to ${job.title} as ${stageLabel(stage)} by ${me.name}.`);
+    }
+    if (!before) added += 1; else if (movable) moved += 1; else kept += 1;
+  }
+  revalidatePath('/pipeline');
+  revalidatePath('/resumes');
+  const where = `${job.title}${job.client ? ` (${job.client})` : ''}`;
+  go(`${added} added to ${where} as ${stageLabel(stage)}${moved ? `, ${moved} already there moved to ${stageLabel(stage)}` : ''}${kept ? `, ${kept} left at their later stage` : ''}.`);
+}

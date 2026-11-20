@@ -1,11 +1,12 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const MAX_BYTES = 4 * 1024 * 1024; // Vercel rejects request bodies over about 4.5 MB
 
 /** Uploads files one by one (keeps each request short) and shows live progress. */
-export default function Uploader({ jobs }) {
+export default function Uploader({ jobs, closeHref = '/resumes' }) {
   const input = useRef(null);
   const router = useRouter();
   const [over, setOver] = useState(false);
@@ -54,13 +55,15 @@ export default function Uploader({ jobs }) {
   const counts = { created: items.filter((i) => i.status === 'created').length, merged: items.filter((i) => i.status === 'merged').length, failed: items.filter((i) => i.status === 'failed').length };
 
   return (
-    <div className="stack" style={{ gap: 16 }}>
+    <div id="upload" className="stack" style={{ gap: 16 }}>
       <div
         className={`drop${over ? ' over' : ''}`}
+        style={{ position: 'relative' }}
         onDragOver={(e) => { e.preventDefault(); setOver(true); }}
         onDragLeave={() => setOver(false)}
         onDrop={(e) => { e.preventDefault(); setOver(false); if (!running) run(e.dataTransfer.files); }}
       >
+        {!running ? <Link href={closeHref} className="btn sm" style={{ position: 'absolute', top: 12, right: 12 }} aria-label="Close upload">Close ✕</Link> : null}
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 16V4" /><path d="M7 9l5-5 5 5" /><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg>
         <h2>Drop PDF, Word or image resumes here</h2>
         <p className="sub">Up to 200 at once. Each one is read, de-duplicated and given a match % for every open job. Strong matches go straight into the pipeline.</p>

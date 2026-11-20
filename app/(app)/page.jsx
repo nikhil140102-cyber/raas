@@ -58,7 +58,7 @@ export default async function Dashboard({ searchParams }) {
           <p>{new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long' })} · {jobs.n} open requirement(s) across {jobs.clients} client(s)</p>
         </div>
         <div className="row">
-          <Link href="/resumes" className="btn">Upload resumes</Link>
+          <Link href="/resumes?upload=1#upload" className="btn">Upload resumes</Link>
           <Link href="/pipeline" className="btn">Open pipeline</Link>
           {can(me, 'jobs.edit') ? <Link href="/jobs/new" className="btn light">New requirement</Link> : null}
         </div>

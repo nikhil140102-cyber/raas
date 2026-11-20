@@ -270,3 +270,14 @@ tr.colfilters .pair { gap: 4px; }
 tr.colfilters .pair input { width: 54px; }
 
 tr.colfilters select.colf { min-width: 88px; }
+
+/* ---- v4.5: resume page summary boxes in three columns ---- */
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: stretch; }
+.grid3 > .card { gap: 10px; padding: 18px 20px; }
+.grid3 > .card h2 { font-size: 16px; }
+.grid3 .btn { white-space: normal; text-align: center; }
+
+.bulkbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 20px; border-top: 1px solid var(--line); background: #FAFAFF; position: sticky; top: 0; z-index: 3; }
+.bulkbar select { width: auto; min-height: 34px; height: 34px; font-size: 13.5px; max-width: 340px; }
+.bulkbar.on { background: var(--accent-soft, #EEF0FF); }
+input.tick { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }

@@ -55,7 +55,7 @@ export default async function PipelinePage({ searchParams }) {
   return (
     <>
       <Header title="Pipeline" sub={`${job.title} · ${apps.length} candidate(s) · below ${job.min_score}% match goes to Rejected`}>
-        <Link href="/resumes" className="btn">Upload resumes</Link>
+        <Link href="/resumes?upload=1#upload" className="btn">Upload resumes</Link>
         <MatchRunner jobs={[{ id: job.id, title: job.title }]} label="Match database resumes to this job" />
       </Header>
       <nav className="tabs" aria-label="Open jobs" style={{ flexWrap: 'wrap', alignSelf: 'flex-start' }}>

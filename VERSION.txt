@@ -1,3 +1,8 @@
+AvaStars Hire v4.5 (patch 10)
+- Resume database: upload panel opens from an 'Upload resumes' button
+- Imports / Match % / Missing details boxes in three columns
+- Tick resumes and add them to a job's pipeline as Pending or Shortlisted
+
 AvaStars Hire v4.4 (patch 09)
 - Any number of accounts per role; role tabs with counts and user search
 - Add several users at once with generated passwords
