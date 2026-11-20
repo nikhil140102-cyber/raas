@@ -18,8 +18,8 @@ export default async function ClientPage({ params }) {
       <Header title={client.name} sub={[client.cloud, client.city].filter(Boolean).join(' · ')} crumbs={<><Link href="/clients">Clients</Link> / {client.name}</>}>
         {can(me, 'jobs.edit') ? <Link href={`/jobs/new?client=${client.id}`} className="btn primary">New requirement</Link> : null}
       </Header>
-      <div className="cols">
-        <section className="card flush col-main">
+      <div className="stack" style={{ gap: 22 }}>
+        <section className="card flush">
           <div className="card-head"><h2>Requirements</h2></div>
           {jobs.length ? (
             <div className="tablewrap">
@@ -60,7 +60,7 @@ export default async function ClientPage({ params }) {
             </>
           ) : null}
         </section>
-        <div className="col-side">{can(me, 'clients.edit') ? <ClientForm client={client} /> : <section className="card"><h2>Client details</h2><p className="small muted">Client contacts and commercials are managed by HR and admins.</p></section>}</div>
+        {can(me, 'clients.edit') ? <ClientForm client={client} /> : <section className="card"><h2>Client details</h2><p className="small muted">Client contacts and commercials are managed by HR and admins.</p></section>}
       </div>
     </>
   );

@@ -1,3 +1,7 @@
+AvaStars Hire v5.1 (patch 16)
+- Client form compact: details in one row, each contact on a single line
+- Client page: details form uses the full width
+
 AvaStars Hire v5.0 (patch 15)
 - Clients: 'Cloud platform' is now 'Industry'; Revenue removed from the form and list
 - Clients: primary + any number of alternate contacts (post, name, email, phone, remarks)

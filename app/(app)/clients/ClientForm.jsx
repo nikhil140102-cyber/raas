@@ -7,7 +7,7 @@ export default function ClientForm({ client = {} }) {
     <form action={saveClient} className="card">
       {client.id ? <input type="hidden" name="id" value={client.id} /> : null}
       <h2>{client.id ? 'Client details' : 'New client'}</h2>
-      <div className="grid">
+      <div className="grid4">
         <label className="field">Company name *<input name="name" required defaultValue={client.name || ''} /></label>
         <label className="field">Industry<input name="cloud" defaultValue={client.cloud || ''} placeholder="IT services, BFSI, Healthcare…" /></label>
         <label className="field">City<input name="city" defaultValue={client.city || ''} /></label>
