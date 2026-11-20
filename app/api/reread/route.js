@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { q, one, j } from '@/lib/db';
-import { currentUser } from '@/lib/auth';
+import { currentStaff as currentUser } from '@/lib/auth';
 import { aiEnabled, extractResume } from '@/lib/ai';
 
 export const runtime = 'nodejs';

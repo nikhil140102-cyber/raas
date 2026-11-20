@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@/lib/auth';
+import { currentStaff as currentUser } from '@/lib/auth';
 import { ingestResume } from '@/lib/ingest';
 
 export const runtime = 'nodejs';

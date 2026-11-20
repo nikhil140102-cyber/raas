@@ -1,3 +1,7 @@
+AvaStars Hire v5.5 (patch 20)
+- Client portal: Client role logins see only their company's jobs, progress numbers, shared candidates, interviews and selections, and give feedback
+- HR / Recruiter now has the same rights as Admin except managing users
+
 AvaStars Hire v5.4 (patch 19)
 - Pipeline: new Jobs view (Indeed-style list) with candidate counts, status dropdown, owner and actions menu
 - Switch between Jobs view and Board view; jobs can be Open, Paused or Closed

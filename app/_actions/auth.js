@@ -16,7 +16,7 @@ export async function login(prev, formData) {
   await q('UPDATE users SET last_login = now() WHERE id = $1', [user.id]);
   const tokenValue = await signSession({ uid: user.id, exp: Date.now() + 14 * 864e5 });
   (await cookies()).set(SESSION_COOKIE, tokenValue, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 14 * 86400 });
-  redirect('/');
+  redirect(user.role === 'client' ? '/portal' : '/');
 }
 
 export async function logout() {

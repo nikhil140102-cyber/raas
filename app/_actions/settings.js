@@ -14,10 +14,12 @@ export async function addUser(formData) {
   const password = String(formData.get('password') || '');
   const role = ROLES[formData.get('role')] ? String(formData.get('role')) : 'intern';
   const name = String(formData.get('name') || '').trim() || 'Recruiter';
+  const clientId = role === 'client' ? Number(formData.get('client_id')) || null : null;
   if (!/^\S+@\S+\.\S+$/.test(email) || password.length < 8) back('A valid email and a password of 8+ characters are required.');
-  const added = await one('INSERT INTO users (email, name, password_hash, role) VALUES ($1,$2,$3,$4) ON CONFLICT (email) DO NOTHING RETURNING id', [email, name, hashPassword(password), role]);
+  if (role === 'client' && !clientId) back('Choose which client company this login belongs to.');
+  const added = await one('INSERT INTO users (email, name, password_hash, role, client_id) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (email) DO NOTHING RETURNING id', [email, name, hashPassword(password), role, clientId]);
   if (!added) back(`${email} already has an account.`);
-  back(`${name} (${email}) added as ${roleLabel(role)}. Share the login link and their starting password with them.`);
+  back(`${name} (${email}) added as ${roleLabel(role)}. Share the login link and their starting password with them.${role === 'client' ? ' They will land on the client portal.' : ''}`);
 }
 
 /** Change role, rename, deactivate/reactivate or reset password. The last active admin is protected. */
@@ -34,6 +36,7 @@ export async function updateUser(formData) {
   if (op === 'role') {
     const role = String(formData.get('role'));
     if (!ROLES[role]) back('Unknown role.');
+    if (role === 'client' && !u.client_id) back(`To make ${u.name} a client login, add them again with the Client role and choose their company.`);
     await q('UPDATE users SET role = $2 WHERE id = $1', [id, role]);
     revalidatePath('/settings');
     back(`${u.name} is now ${roleLabel(role)}.`);
@@ -65,13 +68,14 @@ export async function loadSample() {
 }
 
 export async function changePassword(formData) {
-  const user = await requireUser();
+  const user = await requireUser({ allowClient: true });
+  const backTo = user.role === 'client' ? '/portal/account' : '/settings';
   const row = await one('SELECT password_hash FROM users WHERE id = $1', [user.id]);
-  if (!checkPassword(String(formData.get('current') || ''), row.password_hash)) redirect('/settings?msg=' + encodeURIComponent('Current password is wrong.'));
+  if (!checkPassword(String(formData.get('current') || ''), row.password_hash)) redirect(backTo + '?msg=' + encodeURIComponent('Current password is wrong.'));
   const next = String(formData.get('next') || '');
-  if (next.length < 8) redirect('/settings?msg=' + encodeURIComponent('New password must be at least 8 characters.'));
+  if (next.length < 8) redirect(backTo + '?msg=' + encodeURIComponent('New password must be at least 8 characters.'));
   await q('UPDATE users SET password_hash = $2 WHERE id = $1', [user.id, hashPassword(next)]);
-  redirect('/settings?msg=' + encodeURIComponent('Password changed.'));
+  redirect(backTo + '?msg=' + encodeURIComponent('Password changed.'));
 }
 
 /** Adds many users at once from lines like "Name, email, role". Returns generated passwords to show once. */
@@ -81,7 +85,7 @@ export async function bulkAddUsers(prev, formData) {
   const lines = String(formData.get('lines') || '').split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
   if (!lines.length) return { error: 'Add at least one line: Name, email, role' };
   if (lines.length > 100) return { error: 'Add up to 100 users at a time.' };
-  const alias = { admin: 'admin', hr: 'hr', recruiter: 'hr', 'hr / recruiter': 'hr', intern: 'intern', trainee: 'intern' };
+  const alias = { admin: 'admin', hr: 'hr', recruiter: 'hr', 'hr / recruiter': 'hr', intern: 'intern', trainee: 'intern', client: 'client' };
   const created = []; const skipped = [];
   for (const line of lines) {
     const parts = line.split(/[,;\t]/).map((x) => x.trim()).filter(Boolean);
@@ -89,6 +93,7 @@ export async function bulkAddUsers(prev, formData) {
     const name = parts.find((x) => !x.includes('@') && !alias[x.toLowerCase()]) || email.split('@')[0];
     const role = alias[(parts.find((x) => alias[x.toLowerCase()]) || '').toLowerCase()] || fallback;
     if (!/^\S+@\S+\.\S+$/.test(email)) { skipped.push({ line, why: 'no valid email' }); continue; }
+    if (role === 'client') { skipped.push({ line, why: 'add client logins one at a time so you can pick their company' }); continue; }
     const password = generatePassword();
     const row = await one('INSERT INTO users (email, name, password_hash, role) VALUES ($1,$2,$3,$4) ON CONFLICT (email) DO NOTHING RETURNING id', [email, name, hashPassword(password), role]);
     if (!row) { skipped.push({ line, why: 'already has an account' }); continue; }

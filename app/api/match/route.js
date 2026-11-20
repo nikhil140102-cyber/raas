@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { q, one } from '@/lib/db';
-import { currentUser } from '@/lib/auth';
+import { currentStaff as currentUser } from '@/lib/auth';
 import { aiEnabled } from '@/lib/ai';
 import { scoreAgainstJob } from '@/lib/ingest';
 

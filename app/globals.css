@@ -335,3 +335,30 @@ details.menu > summary::-webkit-details-marker { display: none; }
 .menu-pop a:hover { background: color-mix(in srgb, var(--accent) 8%, #fff); }
 tr.paused-row td { padding-top: 0; border-top: 0; }
 .paused-banner { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+
+/* ---- v5.5: client portal ---- */
+.portal { min-height: 100vh; background: var(--bg); }
+.portal-top { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 14px; padding: 12px 24px; background: #fff; border-bottom: 1px solid var(--border); }
+.portal-top .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; text-decoration: none; color: var(--ink); }
+.portal-top .logo { width: 34px; height: 34px; border-radius: 10px; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; }
+.portal-top .me { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink); }
+.portal-top .spacer { flex: 1; }
+a.card.portal-job { text-decoration: none; color: var(--ink); gap: 14px; }
+a.card.portal-job:hover { border-color: var(--accent); }
+.funnel { display: grid; grid-template-columns: repeat(6, 1fr); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.funnel > div { display: flex; flex-direction: column; padding: 10px 14px; border-left: 1px solid var(--line); }
+.funnel > div:first-child { border-left: 0; }
+.funnel b { font-size: 20px; }
+.funnel span { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.funnel .hot { background: #FFF7ED; }
+.funnel .hot span { color: #B45309; }
+.portal-board { display: grid; grid-template-columns: repeat(5, minmax(220px, 1fr)); gap: 12px; overflow-x: auto; align-items: start; }
+.pcol { background: color-mix(in srgb, var(--accent) 5%, #fff); border: 1px solid var(--border); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
+.pcol-review { background: #FFF7ED; } .pcol-selected, .pcol-joined { background: #ECFDF5; } .pcol-no { background: #F9FAFB; }
+.pcol-head { display: flex; justify-content: space-between; padding: 2px 4px; }
+.pcard { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.pcard .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; }
+.pcard .fact { display: flex; flex-direction: column; }
+.pcard .fact span:first-child { color: var(--muted); }
+.pcard input, .pcard select { min-height: 34px; height: 34px; font-size: 13px; }
+@media (max-width: 700px) { .funnel { grid-template-columns: repeat(3, 1fr); } .portal-top { padding: 10px 14px; flex-wrap: wrap; } }

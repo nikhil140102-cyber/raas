@@ -20,7 +20,8 @@ export default async function SettingsPage({ searchParams }) {
   const me = await requireUser();
   if (!can(me, 'settings.manage')) return <MyAccount me={me} msg={sp.msg} />;
   const st = await callSettings();
-  const users = await q('SELECT id, email, name, role, active, last_login, created_at FROM users ORDER BY active DESC, id');
+  const users = await q('SELECT u.id, u.email, u.name, u.role, u.active, u.last_login, u.created_at, u.client_id, c.name AS company FROM users u LEFT JOIN clients c ON c.id = u.client_id ORDER BY u.active DESC, u.id');
+  const clientList = await q('SELECT id, name FROM clients ORDER BY name');
   const noJobs = (await q('SELECT count(*)::int AS n FROM jobs'))[0].n === 0;
   const outbox = await q('SELECT * FROM messages ORDER BY created_at DESC LIMIT 25');
   const integrations = [
@@ -36,7 +37,7 @@ export default async function SettingsPage({ searchParams }) {
       <Header title="Settings" sub="Integrations, call rules, users and the message outbox" />
       <Flash msg={sp.msg} />
       {appUrlProblem() ? <div className="notice warn" role="alert"><strong>APP_URL needs fixing.</strong> {appUrlProblem()}</div> : null}
-      <UsersAndRoles users={users} me={me} sp={sp} />
+      <UsersAndRoles users={users} me={me} sp={sp} clients={clientList} />
       <div className="cols">
         <section className="col-main">
           <section className="card">
@@ -108,7 +109,7 @@ function RolePill({ role }) {
   return <Pill tone={r.tone}>{r.label}</Pill>;
 }
 
-function UsersAndRoles({ users: all, me, sp }) {
+function UsersAndRoles({ users: all, me, sp, clients = [] }) {
   const roleOptions = Object.entries(ROLES).map(([k, v]) => [k, v.label]);
   const roleTab = ROLES[sp.role] ? sp.role : '';
   const find = String(sp.u || '').trim().toLowerCase();
@@ -137,7 +138,7 @@ function UsersAndRoles({ users: all, me, sp }) {
             {users.map((u) => (
               <tr key={u.id} style={u.active ? undefined : { opacity: 0.55 }}>
                 <td className="strong">{u.name}{u.id === me.id ? <span className="tiny muted"> (you)</span> : null}</td>
-                <td className="small">{u.email}</td>
+                <td className="small">{u.email}{u.company ? <div className="tiny muted">Client: {u.company}</div> : null}</td>
                 <td>
                   <form id={`role-${u.id}`} action={updateUser}><input type="hidden" name="id" value={u.id} /><input type="hidden" name="op" value="role" /></form>
                   <ColSelect form={`role-${u.id}`} name="role" value={roleOf(u)} label={`Role for ${u.name}`} options={roleOptions} />
@@ -178,6 +179,9 @@ function UsersAndRoles({ users: all, me, sp }) {
             <label className="field">Role
               <select name="role" defaultValue="hr">{roleOptions.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
             </label>
+            <label className="field">Client company <span className="hint">Only for the Client role</span>
+              <select name="client_id" defaultValue=""><option value="">—</option>{clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+            </label>
           </div>
           <div><button className="btn primary" type="submit">Add user</button></div>
           <p className="tiny muted">They sign in at {appUrl('/login')} and can change their password under My account.</p>
@@ -198,7 +202,7 @@ function UsersAndRoles({ users: all, me, sp }) {
               {Object.entries(PERMISSIONS).map(([k, p]) => (
                 <tr key={k}><td className="small">{p.label}</td>{Object.keys(ROLES).map((r) => <td key={r} style={{ textAlign: 'center' }}>{p.roles.includes(r) ? '✓' : <span className="muted">—</span>}</td>)}</tr>
               ))}
-              <tr><td className="small">Pipeline stages they can move candidates to</td><td style={{ textAlign: 'center' }} className="small">All</td><td style={{ textAlign: 'center' }} className="small">All</td><td style={{ textAlign: 'center' }} className="small">Pending, Shortlisted, Screening, Rejected</td></tr>
+              <tr><td className="small">Pipeline stages they can move candidates to</td><td style={{ textAlign: 'center' }} className="small">All</td><td style={{ textAlign: 'center' }} className="small">All</td><td style={{ textAlign: 'center' }} className="small">Pending, Shortlisted, Screening, Rejected</td><td style={{ textAlign: 'center' }} className="small">Gives feedback on shared candidates</td></tr>
             </tbody>
           </table>
         </div>

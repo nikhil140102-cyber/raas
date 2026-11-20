@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { one } from '@/lib/db';
-import { currentUser } from '@/lib/auth';
+import { currentStaff as currentUser } from '@/lib/auth';
 import { exportResponse } from '@/lib/resumeExport';
 
 export const runtime = 'nodejs';
