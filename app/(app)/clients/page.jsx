@@ -62,12 +62,12 @@ export default async function ClientsPage({ searchParams }) {
               {clients.length ? (
                 <div className="tablewrap">
                   <table className="t" style={{ minWidth: 820 }}>
-                    <thead><tr><th>Client</th><th>Cloud</th><th>City</th>{can(me, 'clients.commercials') ? <th>Revenue</th> : null}<th>Open roles</th><th>Avg feedback time</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Client</th><th>Industry</th><th>City</th><th>Primary contact</th><th>Open roles</th><th>Avg feedback time</th><th>Status</th></tr></thead>
                     <tbody>
                       {clients.map((c) => (
                         <tr key={c.id}>
-                          <td className="namecell"><Link href={`/clients/${c.id}`}>{c.name}</Link><div>{c.contact_name || 'No contact yet'}</div></td>
-                          <td>{c.cloud || '—'}</td><td>{c.city || '—'}</td>{can(me, 'clients.commercials') ? <td>{c.revenue_cr ? `₹${c.revenue_cr} Cr` : '—'}</td> : null}
+                          <td className="namecell"><Link href={`/clients/${c.id}`}>{c.name}</Link></td>
+                          <td>{c.cloud || '—'}</td><td>{c.city || '—'}</td><td className="small">{c.contact_name || '—'}{(c.contacts || []).length > 1 ? <span className="tiny muted"> +{c.contacts.length - 1} more</span> : null}</td>
                           <td>{c.open_roles}</td>
                           <td>{c.avg_feedback_h !== null ? `${c.avg_feedback_h}h` : '—'}</td>
                           <td><Pill tone={c.status === 'active' ? (c.avg_feedback_h > 24 ? 'amber' : 'green') : c.status === 'on hold' ? 'gray' : 'blue'}>{c.status === 'active' && c.avg_feedback_h > 24 ? 'Slow feedback' : c.status}</Pill></td>
@@ -137,8 +137,8 @@ export default async function ClientsPage({ searchParams }) {
           )}
         </section>
 
-        <aside className="col-side">
-          {can(me, 'clients.edit') ? <form action={saveIcp} className="card">
+        {tab === 'prospects' && can(me, 'clients.edit') ? <aside className="col-side">
+          <form action={saveIcp} className="card">
             <h2>Ideal client profile</h2>
             <p className="small muted">Prospects are scored against these rules.</p>
             <label className="field">Cloud platforms<input name="clouds" defaultValue={icp.clouds.join(', ')} /></label>
@@ -149,8 +149,8 @@ export default async function ClientsPage({ searchParams }) {
             </div>
             <label className="field">Focus cities<textarea name="cities" rows={2} defaultValue={icp.cities.join(', ')} /></label>
             <button className="btn" type="submit">Save profile</button>
-          </form> : null}
-        </aside>
+          </form>
+        </aside> : null}
       </div>
     </>
   );

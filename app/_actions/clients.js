@@ -9,16 +9,29 @@ import { j } from '@/lib/db';
 
 const s = (fd, k) => String(fd.get(k) || '').trim() || null;
 
+/** Contacts come in as parallel lists (one entry per row). The primary contact is stored first. */
+function readContacts(fd) {
+  const col = (k) => fd.getAll(`contact_${k}`).map((v) => String(v || '').trim());
+  const names = col('name'); const posts = col('post'); const emails = col('email'); const phones = col('phone'); const remarks = col('remarks');
+  const primary = Number(fd.get('contact_primary')) || 0;
+  const rows = names.map((name, i) => ({ post: posts[i] || '', name, email: emails[i] || '', phone: phones[i] || '', remarks: remarks[i] || '', primary: i === primary }))
+    .filter((c) => c.name || c.email || c.phone);
+  if (rows.length && !rows.some((c) => c.primary)) rows[0].primary = true;
+  return rows.sort((a, b) => Number(b.primary) - Number(a.primary));
+}
+
 export async function saveClient(formData) {
   await requirePerm('clients.edit');
   const id = num(formData.get('id'));
-  const vals = [s(formData, 'name'), s(formData, 'cloud'), s(formData, 'city'), num(formData.get('revenue_cr')), s(formData, 'contact_name'), s(formData, 'contact_email'), s(formData, 'contact_phone'), s(formData, 'status') || 'active', s(formData, 'notes'), j(parseQuestions(formData.get('questions')))];
+  const contacts = readContacts(formData);
+  const p = contacts[0] || {};
+  const vals = [s(formData, 'name'), s(formData, 'cloud'), s(formData, 'city'), p.name || null, p.email || null, p.phone || null, s(formData, 'status') || 'active', s(formData, 'notes'), j(parseQuestions(formData.get('questions'))), j(contacts)];
   if (!vals[0]) throw new Error('Client name is required');
   let clientId = id;
   if (id) {
-    await q('UPDATE clients SET name=$2, cloud=$3, city=$4, revenue_cr=$5, contact_name=$6, contact_email=$7, contact_phone=$8, status=$9, notes=$10, screening_questions=$11::jsonb WHERE id=$1', [id, ...vals]);
+    await q('UPDATE clients SET name=$2, cloud=$3, city=$4, contact_name=$5, contact_email=$6, contact_phone=$7, status=$8, notes=$9, screening_questions=$10::jsonb, contacts=$11::jsonb WHERE id=$1', [id, ...vals]);
   } else {
-    clientId = (await one('INSERT INTO clients (name, cloud, city, revenue_cr, contact_name, contact_email, contact_phone, status, notes, screening_questions) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb) RETURNING id', vals)).id;
+    clientId = (await one('INSERT INTO clients (name, cloud, city, contact_name, contact_email, contact_phone, status, notes, screening_questions, contacts) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb) RETURNING id', vals)).id;
   }
   revalidatePath('/clients');
   redirect(`/clients/${clientId}`);
