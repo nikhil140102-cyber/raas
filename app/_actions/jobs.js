@@ -43,7 +43,7 @@ function jobFromForm(fd) {
 }
 
 export async function saveJob(formData) {
-  await requirePerm('jobs.edit');
+  const me = await requirePerm('jobs.edit');
   const id = num(formData.get('id'));
   const v = jobFromForm(formData);
   if (!v.title) throw new Error('Job title is required');
@@ -62,7 +62,7 @@ export async function saveJob(formData) {
     await q(`UPDATE jobs SET ${cols.map((c, i) => `${c} = ${cast(c, i)}`).join(', ')} WHERE id = $${cols.length + 1}`, [...params, id]);
   } else {
     const slug = `${slugify(v.title)}-${token(3).toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-    jobId = (await one(`INSERT INTO jobs (${cols.join(', ')}, slug) VALUES (${cols.map(cast).join(', ')}, $${cols.length + 1}) RETURNING id`, [...params, slug])).id;
+    jobId = (await one(`INSERT INTO jobs (${cols.join(', ')}, slug, created_by) VALUES (${cols.map(cast).join(', ')}, $${cols.length + 1}, $${cols.length + 2}) RETURNING id`, [...params, slug, me.id])).id;
     for (const p of PORTALS) {
       const status = p.id === 'careers' ? 'live' : p.id === 'google' ? 'submitted' : 'not_posted';
       await q('INSERT INTO job_postings (job_id, portal, status, posted_at) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', [jobId, p.id, status, p.id === 'careers' ? new Date() : null]);
@@ -115,11 +115,15 @@ export async function setPostingStatus(formData) {
 export async function setJobStatus(formData) {
   await requirePerm('jobs.edit');
   const jobId = num(formData.get('job_id'));
-  const status = s(formData, 'status');
+  const status = ['open', 'paused', 'closed'].includes(s(formData, 'status')) ? s(formData, 'status') : 'open';
   await q(`UPDATE jobs SET status = $2, closed_at = CASE WHEN $2 = 'closed' THEN now() ELSE NULL END WHERE id = $1`, [jobId, status]);
   if (status === 'closed') await q(`UPDATE job_postings SET status = CASE WHEN portal IN ('careers','google') THEN 'closed' ELSE 'close_manually' END, updated_at = now() WHERE job_id = $1 AND status <> 'not_posted'`, [jobId]);
   if (status === 'open') await q(`UPDATE job_postings SET status = 'live', updated_at = now() WHERE job_id = $1 AND portal = 'careers'`, [jobId]);
+  if (status === 'paused') await q(`UPDATE job_postings SET status = 'paused', updated_at = now() WHERE job_id = $1 AND portal = 'careers'`, [jobId]);
   revalidatePath(`/jobs/${jobId}`);
+  revalidatePath('/pipeline');
+  const back = s(formData, 'back');
+  if (back && back.startsWith('/')) redirect(back);
 }
 
 /** JD import: reads an uploaded file or pasted text and returns form fields. */

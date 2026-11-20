@@ -1,3 +1,16 @@
+AvaStars Hire v5.4 (patch 19)
+- Pipeline: new Jobs view (Indeed-style list) with candidate counts, status dropdown, owner and actions menu
+- Switch between Jobs view and Board view; jobs can be Open, Paused or Closed
+
+AvaStars Hire v5.3 (patch 18)
+- Client contacts: Remarks on its own second line under each contact
+
+AvaStars Hire v5.2 (patch 17)
+- Client form always uses the full page width; a single contact row fills the whole line
+
+AvaStars Hire v5.2 (patch 17)
+- Add client form uses the full page width
+
 AvaStars Hire v5.1 (patch 16)
 - Client form compact: details in one row, each contact on a single line
 - Client page: details form uses the full width

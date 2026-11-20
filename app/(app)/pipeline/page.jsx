@@ -9,6 +9,16 @@ import { can, canMoveTo } from '@/lib/roles';
 import MatchRunner from '@/components/MatchRunner';
 import FilterBar from '@/components/FilterBar';
 import { readFilters, candidateWhere, orderBy, activeFilterCount, SORTS } from '@/lib/filters';
+import JobsView from './JobsView';
+
+function ViewSwitch({ view }) {
+  return (
+    <nav className="tabs view-switch" aria-label="Pipeline view">
+      <Link href="/pipeline?view=jobs" aria-current={view === 'jobs' ? 'page' : undefined}>☰ Jobs view</Link>
+      <Link href="/pipeline?view=board" aria-current={view === 'board' ? 'page' : undefined}>▦ Board view</Link>
+    </nav>
+  );
+}
 
 export const metadata = { title: 'Pipeline — AvaStars Hire' };
 
@@ -26,6 +36,19 @@ function cardTag(a) {
 
 export default async function PipelinePage({ searchParams }) {
   const sp = await searchParams;
+  // Jobs view is the landing view; opening a job (or choosing Board view) shows the candidate board.
+  const view = sp.view === 'board' || sp.job ? 'board' : 'jobs';
+  if (view === 'jobs') {
+    const me = await requireUser();
+    return (
+      <>
+        <Header title="Pipeline" sub="All requirements at a glance. Open a job to work on its candidates.">
+          <ViewSwitch view="jobs" />
+        </Header>
+        <JobsView sp={sp} me={me} />
+      </>
+    );
+  }
   const jobs = await q(`SELECT j.id, j.title, c.name AS client, (SELECT count(*)::int FROM applications a WHERE a.job_id = j.id AND a.stage <> 'rejected') AS n FROM jobs j LEFT JOIN clients c ON c.id = j.client_id WHERE j.status = 'open' ORDER BY j.created_at DESC`);
   const busiest = await one(`SELECT a.job_id FROM applications a JOIN jobs j ON j.id = a.job_id WHERE j.status = 'open' ORDER BY a.updated_at DESC LIMIT 1`);
   const jobId = Number(sp.job) || busiest?.job_id || jobs[0]?.id;
@@ -55,6 +78,7 @@ export default async function PipelinePage({ searchParams }) {
   return (
     <>
       <Header title="Pipeline" sub={`${job.title} · ${apps.length} candidate(s) · below ${job.min_score}% match goes to Rejected`}>
+        <ViewSwitch view="board" />
         <Link href="/resumes?upload=1#upload" className="btn">Upload resumes</Link>
         <MatchRunner jobs={[{ id: job.id, title: job.title }]} label="Match database resumes to this job" />
       </Header>
