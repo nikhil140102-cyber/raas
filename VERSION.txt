@@ -1,3 +1,6 @@
+AvaStars Hire v4.8 (patch 13)
+- Indeed / Naukri 'Mark as posted' now always saves and appears in Share history with a View job link
+
 AvaStars Hire v4.7 (patch 12)
 - Announce page: X, Facebook and Instagram cards removed (LinkedIn, WhatsApp, Telegram stay)
 

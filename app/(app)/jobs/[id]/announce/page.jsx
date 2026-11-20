@@ -119,12 +119,12 @@ export default async function AnnouncePage({ params, searchParams }) {
             </ol>
           </section>
 
-          <section className="card">
+          <section id="history" className="card">
             <h2>Share history</h2>
             {history.length ? history.map((h) => (
               <div key={h.id} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
-                <span><span className="strong">{PLATFORMS.find((p) => p.id === h.platform)?.name || h.platform}</span> · {h.who || '—'} · {fmtDate(h.created_at)}</span>
-                {h.status === 'posted' && h.url ? <a href={h.url} target="_blank" rel="noreferrer">View post</a> : <Pill tone={h.status === 'failed' ? 'red' : 'green'}>{h.status}</Pill>}
+                <span><span className="strong">{PLATFORMS.find((p) => p.id === h.platform)?.name || { indeed: 'Indeed', naukri: 'Naukri', x: 'X (Twitter)', facebook: 'Facebook', instagram: 'Instagram' }[h.platform] || h.platform}</span> · {h.who || '—'} · {fmtDate(h.created_at)}</span>
+                {h.status === 'posted' && h.url ? <a href={h.url} target="_blank" rel="noreferrer">{['indeed', 'naukri'].includes(h.platform) ? 'View job' : 'View post'}</a> : <Pill tone={h.status === 'failed' ? 'red' : 'green'}>{h.status}</Pill>}
               </div>
             )) : <p className="small muted">Nothing shared yet.</p>}
           </section>

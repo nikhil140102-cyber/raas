@@ -88,10 +88,21 @@ export async function aiSuggestQuestions(fields) {
 }
 
 export async function markPosted(formData) {
-  await requirePerm('jobs.post');
+  const user = await requirePerm('jobs.post');
   const jobId = num(formData.get('job_id'));
-  await q(`UPDATE job_postings SET status = 'posted', url = $3, posted_at = COALESCE(posted_at, now()), updated_at = now() WHERE job_id = $1 AND portal = $2`, [jobId, s(formData, 'portal'), s(formData, 'url')]);
+  const portal = s(formData, 'portal');
+  const url = s(formData, 'url');
+  // Upsert: the portal row may not exist if it wasn't ticked when the job was created.
+  const prev = await one('SELECT status, url FROM job_postings WHERE job_id = $1 AND portal = $2', [jobId, portal]);
+  await q(`INSERT INTO job_postings (job_id, portal, status, url, posted_at, updated_at) VALUES ($1, $2, 'posted', $3, now(), now())
+    ON CONFLICT (job_id, portal) DO UPDATE SET status = 'posted', url = EXCLUDED.url, posted_at = COALESCE(job_postings.posted_at, now()), updated_at = now()`, [jobId, portal, url]);
+  // Show it in the share history too (once per new link).
+  if (!prev || prev.status !== 'posted' || (prev.url || null) !== url) {
+    await q(`INSERT INTO social_posts (job_id, platform, body, status, url, posted_by) VALUES ($1,$2,$3,'posted',$4,$5)`, [jobId, portal, prev?.status === 'posted' ? 'Live link updated' : 'Job posted on the portal', url, user.id]);
+  }
   revalidatePath(`/jobs/${jobId}`);
+  revalidatePath(`/jobs/${jobId}/announce`);
+  redirect(`/jobs/${jobId}/announce?msg=${encodeURIComponent(`Saved: ${portal === 'naukri' ? 'Naukri' : portal === 'indeed' ? 'Indeed' : portal} marked as posted${url ? ' with its live link' : ''}.`)}#history`);
 }
 
 export async function setPostingStatus(formData) {
