@@ -59,6 +59,7 @@ export default async function ResumesPage({ searchParams }) {
   return (
     <>
       <Header title="Resume database" sub={`${all.n} profile(s) · duplicates merged by email and phone`}>
+        <Link href="/resumes/import" className="btn">Import from Indeed / Naukri</Link>
         {showUpload ? null : <Link href={`/resumes?${new URLSearchParams({ ...sp, upload: '1' })}#upload`} className="btn primary">Upload resumes</Link>}
       </Header>
       <Flash msg={sp.msg} />
@@ -69,6 +70,7 @@ export default async function ResumesPage({ searchParams }) {
             <h2>Automatic imports</h2>
             <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">Careers page apply form</div><div className="tiny muted">Saves straight to the database</div></div><Pill tone="green">On</Pill></div>
             <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">Careers inbox (IMAP)</div><div className="tiny muted">{inbox ? `${cfg('IMAP_USER')} · checked by cron` : 'Set IMAP_* in the environment'}</div></div><Pill tone={inbox ? 'green' : 'gray'}>{inbox ? 'On' : 'Off'}</Pill></div>
+            <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">Indeed / Naukri applicants</div><div className="tiny muted">Import a file, paste a page or use the Chrome extension</div></div><Link href="/resumes/import" className="btn sm">Import</Link></div>
             <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">OneDrive folder</div><div className="tiny muted">Planned for a later phase</div></div><Pill tone="gray">Later</Pill></div>
             {failedCount.n ? <Link href="/resumes?failed=1" className="small strong">{failedCount.n} file(s) could not be read →</Link> : null}
           </section>

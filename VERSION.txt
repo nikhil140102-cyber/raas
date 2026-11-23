@@ -1,3 +1,10 @@
+AvaStars Hire v5.9 (patch 24) - Import applicants from Indeed / Naukri
+- Resumes > Import: upload the applicants file from any portal (CSV, .xlsx, the .xls Naukri gives), columns detected automatically, applied-date filter (Today / 7 days / 30 days / any range), preview, choose job (auto-match by job title), add resume files or ZIP
+- Paste from a page: copy a portal list, profile or email and the applicants are found
+- AvaStars Collector Chrome extension (download on the Import page): scan the open portal page, date filter, send to AvaStars; optional resume catcher for downloaded CVs
+- Inbound API: job_title + auto_job, applied date, experience, CTC, notice, skills; /api/inbound/jobs and /api/inbound/extract
+- Applicants without a CV go in as Pending ("no resume yet") and are scored when the CV arrives; recent imports report
+
 AvaStars Hire v5.8 (patch 23)
 - Settings > Keys & connections: admins edit API keys and connections in the app (AI, App URL, inbound API, cron, voice, SMTP, IMAP, LinkedIn, WhatsApp)
 - Secrets encrypted in the database, masked on screen, change history kept; Vercel values used as fallback

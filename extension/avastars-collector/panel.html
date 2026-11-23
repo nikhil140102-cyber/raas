@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AvaStars Collector</title>
+  <link rel="stylesheet" href="panel.css" />
+</head>
+<body>
+  <header class="top">
+    <img src="icons/icon32.png" alt="" width="24" height="24" />
+    <div class="grow">
+      <div class="title">AvaStars Collector</div>
+      <div class="tiny muted" id="conn">Not connected</div>
+    </div>
+    <button type="button" class="btn ghost sm" id="toggleSettings" aria-expanded="false">Settings</button>
+  </header>
+
+  <section class="card" id="settings" hidden>
+    <h2>Connect to AvaStars Hire</h2>
+    <label class="field">App address
+      <input id="appUrl" type="url" placeholder="https://raas-drab.vercel.app" autocomplete="off" />
+    </label>
+    <label class="field">Inbound API key
+      <input id="apiKey" type="password" placeholder="Paste the key from Settings → Keys & connections" autocomplete="off" />
+    </label>
+    <div class="row">
+      <button type="button" class="btn primary" id="saveSettings">Save & test</button>
+      <span class="tiny muted" id="settingsMsg" role="status"></span>
+    </div>
+    <p class="tiny muted">The key is stored only in this Chrome profile. Anyone with it can add candidates, so don't share it.</p>
+  </section>
+
+  <main id="main">
+    <section class="card">
+      <div class="row between">
+        <div>
+          <div class="tiny muted">This page</div>
+          <div class="strong" id="pageName">—</div>
+        </div>
+        <select id="source" aria-label="Source"></select>
+      </div>
+      <div id="permBox" class="notice warn" hidden>
+        The collector isn't allowed on this site yet.
+        <button type="button" class="btn sm" id="allowSite">Allow on this site</button>
+      </div>
+
+      <label class="field">Add them to
+        <select id="job"><option value="auto">Matching job (by the job title on the page)</option></select>
+      </label>
+
+      <div class="field">
+        <span>Applied between</span>
+        <div class="row">
+          <input type="date" id="from" aria-label="From date" />
+          <span class="tiny muted">to</span>
+          <input type="date" id="to" aria-label="To date" />
+        </div>
+        <div class="chips" id="presets"></div>
+        <label class="row tiny"><input type="checkbox" id="undated" /> Also include people with no applied date shown</label>
+      </div>
+
+      <button type="button" class="btn primary block" id="scan">Scan this page</button>
+      <p class="tiny muted">Tip: select part of the page first to read only that part. For lists with many pages, scan each page; results add up below.</p>
+      <div id="scanMsg" class="tiny" role="status"></div>
+    </section>
+
+    <section class="card" id="listCard" hidden>
+      <div class="row between">
+        <h2 id="listTitle">Applicants</h2>
+        <button type="button" class="btn ghost sm" id="clearList">Clear list</button>
+      </div>
+      <div class="row between tiny">
+        <span id="listCount"></span>
+        <span><button type="button" class="link" id="selAll">All</button> · <button type="button" class="link" id="selNone">None</button></span>
+      </div>
+      <div id="list" class="list"></div>
+      <div id="resumeBox" class="field" hidden>
+        <label class="row tiny"><input type="checkbox" id="attachResume" checked /> Attach the resume from this page</label>
+        <select id="resumeLink" aria-label="Resume link"></select>
+      </div>
+      <button type="button" class="btn primary block" id="send">Send to AvaStars</button>
+      <div id="report" class="report" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <label class="row between">
+        <span><span class="strong">Resume catcher</span><br /><span class="tiny muted">When you download a CV from a job portal, send it to AvaStars too (to the job chosen above).</span></span>
+        <input type="checkbox" id="catcher" class="switch" />
+      </label>
+      <div id="catcherLog" class="list tiny"></div>
+    </section>
+  </main>
+  <script src="panel.js"></script>
+</body>
+</html>
