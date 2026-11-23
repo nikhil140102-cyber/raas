@@ -1,3 +1,4 @@
+import { cfg } from '@/lib/config';
 import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { q, one, logActivity } from '@/lib/db';
@@ -14,7 +15,7 @@ export const maxDuration = 60;
  * Fields: name, email, phone, location, job_id or job_slug, source, notes.
  */
 function authorized(req) {
-  const key = process.env.INBOUND_API_KEY || '';
+  const key = cfg('INBOUND_API_KEY') || '';
   if (key.length < 16) return false;
   const given = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '') || req.headers.get('x-api-key') || '';
   const a = Buffer.from(given); const b = Buffer.from(key);
@@ -24,7 +25,7 @@ function authorized(req) {
 const clean = (v, max = 200) => (v === null || v === undefined ? '' : String(v).trim().slice(0, max));
 
 export async function POST(req) {
-  if (!process.env.INBOUND_API_KEY) return NextResponse.json({ error: 'INBOUND_API_KEY is not set on the server.' }, { status: 503 });
+  if (!cfg('INBOUND_API_KEY')) return NextResponse.json({ error: 'INBOUND_API_KEY is not set on the server.' }, { status: 503 });
   if (!authorized(req)) return NextResponse.json({ error: 'Invalid API key.' }, { status: 401 });
 
   let f = {}; let buffer = null; let filename = ''; let mime = '';

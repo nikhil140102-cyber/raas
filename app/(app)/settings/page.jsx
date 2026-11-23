@@ -1,3 +1,4 @@
+import { cfg } from '@/lib/config';
 import { q } from '@/lib/db';
 import { Header, Pill, Flash } from '@/components/ui';
 import { fmtDate, appUrl, appUrlProblem } from '@/lib/util';
@@ -26,10 +27,10 @@ export default async function SettingsPage({ searchParams }) {
   const outbox = await q('SELECT * FROM messages ORDER BY created_at DESC LIMIT 25');
   const integrations = [
     ['Database', process.env.DATABASE_URL ? 'Postgres (DATABASE_URL)' : 'Built-in local database', !!process.env.DATABASE_URL],
-    ['AI (resume reading, matching, call scoring)', aiEnabled() ? `On · ${process.env.AI_MODEL || 'claude-haiku-5-5'}` : 'Off — keyword rules only', aiEnabled()],
-    ['Email (SMTP)', process.env.SMTP_HOST ? process.env.SMTP_HOST : 'Off — messages only saved in the Outbox', !!process.env.SMTP_HOST],
-    ['WhatsApp', process.env.WHATSAPP_WEBHOOK_URL ? 'On' : 'Off — messages only saved in the Outbox', !!process.env.WHATSAPP_WEBHOOK_URL],
-    ['Careers inbox (IMAP)', process.env.IMAP_HOST ? process.env.IMAP_USER : 'Off', !!process.env.IMAP_HOST],
+    ['AI (resume reading, matching, call scoring)', aiEnabled() ? `On · ${cfg('AI_MODEL') || 'claude-haiku-5-5'}` : 'Off — keyword rules only', aiEnabled()],
+    ['Email (SMTP)', cfg('SMTP_HOST') ? cfg('SMTP_HOST') : 'Off — messages only saved in the Outbox', !!cfg('SMTP_HOST')],
+    ['WhatsApp', cfg('WHATSAPP_WEBHOOK_URL') ? 'On' : 'Off — messages only saved in the Outbox', !!cfg('WHATSAPP_WEBHOOK_URL')],
+    ['Careers inbox (IMAP)', cfg('IMAP_HOST') ? cfg('IMAP_USER') : 'Off', !!cfg('IMAP_HOST')],
     ['Voice calls', providerName() === 'mock' ? 'Test mode (no real calls)' : providerName(), providerName() !== 'mock'],
   ];
   return (
@@ -42,7 +43,8 @@ export default async function SettingsPage({ searchParams }) {
         <section className="col-main">
           <section className="card">
             <h2>Integrations</h2>
-            <p className="small muted">These are set with environment variables (see .env.example). Restart the app after changing them.</p>
+            <p className="small muted">Add or change API keys and connections in the app. Values saved there win over Vercel&apos;s environment variables.</p>
+            {can(me, 'secrets.manage') ? <div><Link href="/settings/keys" className="btn primary sm">Manage keys & connections</Link></div> : <p className="tiny muted">Only admins can change keys.</p>}
             {integrations.map(([k, v, on]) => (
               <div key={k} className="row" style={{ justifyContent: 'space-between', paddingBottom: 10, borderBottom: '1px solid var(--line)' }}><span className="strong">{k}</span><span className="row" style={{ gap: 8 }}><span className="small muted">{v}</span><Pill tone={on ? 'green' : 'gray'}>{on ? 'On' : 'Off'}</Pill></span></div>
             ))}
@@ -51,7 +53,7 @@ export default async function SettingsPage({ searchParams }) {
           <section id="inbound" className="card">
             <h2>Inbound Candidate API</h2>
             <p className="small muted">Lets Zapier, Make, n8n, Google Forms, your website or partners add candidates automatically. Each one is read, scored and placed on the board like any upload.</p>
-            <div className="row" style={{ gap: 8 }}><Pill tone={process.env.INBOUND_API_KEY ? 'green' : 'gray'}>{process.env.INBOUND_API_KEY ? 'On' : 'Off: set INBOUND_API_KEY'}</Pill></div>
+            <div className="row" style={{ gap: 8 }}><Pill tone={cfg('INBOUND_API_KEY') ? 'green' : 'gray'}>{cfg('INBOUND_API_KEY') ? 'On' : 'Off: set INBOUND_API_KEY'}</Pill></div>
             <label className="field">Address (POST)<input readOnly value={appUrl('/api/inbound/candidate')} /></label>
             <p className="tiny muted" style={{ margin: 0 }}>Header: <code>Authorization: Bearer YOUR_INBOUND_API_KEY</code>. Send form-data (fields + a <code>resume</code> file) or JSON (fields + <code>resume_base64</code>, <code>resume_filename</code>). Fields: <code>name, email, phone, location, job_id</code> or <code>job_slug, source, notes</code>. Without a resume, name plus email or phone creates a basic profile.</p>
           </section>

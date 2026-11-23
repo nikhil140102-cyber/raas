@@ -1,3 +1,4 @@
+import { cfg } from '@/lib/config';
 import { NextResponse } from 'next/server';
 import { parseWebhook } from '@/lib/voice';
 import { finishCall } from '@/lib/screening';
@@ -10,7 +11,7 @@ export const maxDuration = 60;
 export async function POST(req, { params }) {
   const { provider } = await params;
   const url = new URL(req.url);
-  const secret = process.env.VOICE_WEBHOOK_SECRET;
+  const secret = cfg('VOICE_WEBHOOK_SECRET');
   if (!secret || (url.searchParams.get('secret') !== secret && req.headers.get('x-webhook-secret') !== secret)) {
     return NextResponse.json({ error: 'Bad secret' }, { status: 401 });
   }

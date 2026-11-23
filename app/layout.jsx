@@ -1,10 +1,11 @@
+import { appUrl } from '@/lib/util';
+import { reloadConfig } from '@/lib/db';
 import './globals.css';
 
-export const metadata = {
-  metadataBase: new URL(process.env.APP_URL || 'http://localhost:3000'),
-  title: 'AvaStars Hire',
-  description: 'Recruitment workspace for AvaStars',
-};
+export async function generateMetadata() {
+  await reloadConfig().catch(() => {});
+  return { metadataBase: new URL(appUrl()), title: 'AvaStars Hire', description: 'Recruitment workspace for AvaStars' };
+}
 
 export default function RootLayout({ children }) {
   return (

@@ -1,3 +1,4 @@
+import { cfg } from '@/lib/config';
 import { NextResponse } from 'next/server';
 import { cronAllowed } from '@/lib/cronAuth';
 import { q } from '@/lib/db';
@@ -10,13 +11,13 @@ export const maxDuration = 60;
 // If the subject contains an open job title, the resume is matched to that job.
 export async function GET(req) {
   if (!cronAllowed(req)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  if (!process.env.IMAP_HOST) return NextResponse.json({ skipped: 'IMAP not configured' });
+  if (!cfg('IMAP_HOST')) return NextResponse.json({ skipped: 'IMAP not configured' });
   const { ImapFlow } = await import('imapflow');
   const { simpleParser } = await import('mailparser');
   const jobs = await q(`SELECT id, title FROM jobs WHERE status = 'open'`);
   const client = new ImapFlow({
-    host: process.env.IMAP_HOST, port: Number(process.env.IMAP_PORT || 993), secure: true,
-    auth: { user: process.env.IMAP_USER, pass: process.env.IMAP_PASS }, logger: false,
+    host: cfg('IMAP_HOST'), port: Number(cfg('IMAP_PORT') || 993), secure: true,
+    auth: { user: cfg('IMAP_USER'), pass: cfg('IMAP_PASS') }, logger: false,
   });
   const results = [];
   await client.connect();

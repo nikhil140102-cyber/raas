@@ -1,3 +1,7 @@
+AvaStars Hire v5.8 (patch 23)
+- Settings > Keys & connections: admins edit API keys and connections in the app (AI, App URL, inbound API, cron, voice, SMTP, IMAP, LinkedIn, WhatsApp)
+- Secrets encrypted in the database, masked on screen, change history kept; Vercel values used as fallback
+
 AvaStars Hire v5.7 (patch 22) - Phase 1 fixes
 - Raw resume files are staff-only (clients get the redacted PDF only)
 - Clients can undo only their own decisions; cannot revive HR rejections

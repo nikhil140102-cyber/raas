@@ -1,3 +1,4 @@
+import { cfg } from '@/lib/config';
 import Link from 'next/link';
 import { q, one } from '@/lib/db';
 import { Header, Score, Pill, Flash } from '@/components/ui';
@@ -49,7 +50,7 @@ export default async function ResumesPage({ searchParams }) {
   const jobs = await q(`SELECT j.id, j.title, c.name AS client FROM jobs j LEFT JOIN clients c ON c.id = j.client_id WHERE j.status = 'open' ORDER BY j.created_at DESC`);
   const failed = sp.failed ? await q('SELECT id, filename, parse_error, created_at FROM files WHERE parse_error IS NOT NULL ORDER BY created_at DESC LIMIT 30') : [];
   const failedCount = await one('SELECT count(*)::int AS n FROM files WHERE parse_error IS NOT NULL');
-  const inbox = Boolean(process.env.IMAP_HOST);
+  const inbox = Boolean(cfg('IMAP_HOST'));
   const showUpload = sp.upload === '1';
   const { upload: _u, ...spNoUpload } = sp;
   const sources = (await q("SELECT DISTINCT source FROM candidates WHERE source IS NOT NULL AND source <> '' ORDER BY source")).map((r) => r.source);
@@ -67,7 +68,7 @@ export default async function ResumesPage({ searchParams }) {
           <section className="card">
             <h2>Automatic imports</h2>
             <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">Careers page apply form</div><div className="tiny muted">Saves straight to the database</div></div><Pill tone="green">On</Pill></div>
-            <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">Careers inbox (IMAP)</div><div className="tiny muted">{inbox ? `${process.env.IMAP_USER} · checked by cron` : 'Set IMAP_* in the environment'}</div></div><Pill tone={inbox ? 'green' : 'gray'}>{inbox ? 'On' : 'Off'}</Pill></div>
+            <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">Careers inbox (IMAP)</div><div className="tiny muted">{inbox ? `${cfg('IMAP_USER')} · checked by cron` : 'Set IMAP_* in the environment'}</div></div><Pill tone={inbox ? 'green' : 'gray'}>{inbox ? 'On' : 'Off'}</Pill></div>
             <div className="row" style={{ justifyContent: 'space-between' }}><div><div className="strong">OneDrive folder</div><div className="tiny muted">Planned for a later phase</div></div><Pill tone="gray">Later</Pill></div>
             {failedCount.n ? <Link href="/resumes?failed=1" className="small strong">{failedCount.n} file(s) could not be read →</Link> : null}
           </section>
