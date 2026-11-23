@@ -9,9 +9,18 @@ const INDEED = {
   /** Jobs page: every posted job with its applicant counts (drafts have no applicants and are skipped). */
   readJobs: async () => {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-    // Indeed builds the list after the page loads; give it up to ~25 s (it can be slow on first open).
-    for (let i = 0; i < 50 && !document.querySelector('tr[data-testid="job-row"]'); i++) await wait(500);
-    await wait(800); // let the counts fill in
+    // Indeed first draws grey placeholder rows, then fills in each job a few seconds later.
+    // Wait until the posted-job links stop changing (or ~30 s), so no job is missed.
+    const posted = () => document.querySelectorAll('tr[data-testid="job-row"] a[data-testid="UnifiedJobTldLink"][href*="/jobs/view"]').length;
+    const filled = () => [...document.querySelectorAll('tr[data-testid="job-row"]')].filter((r) => r.querySelector('a[href]')).length;
+    let last = -1; let steady = 0;
+    for (let i = 0; i < 60; i++) {
+      const n = `${posted()}/${filled()}/${document.querySelectorAll('tr[data-testid="job-row"]').length}`;
+      steady = n === last ? steady + 1 : 0; last = n;
+      if (posted() > 0 && steady >= 4) break;           // posted jobs found and nothing changed for 2 s
+      if (i > 24 && filled() > 0 && steady >= 6) break; // only drafts, page settled
+      await wait(500);
+    }
     const num = (el) => Number(((el && el.textContent) || '').replace(/\D/g, '')) || 0;
     const jobs = [];
     for (const row of document.querySelectorAll('tr[data-testid="job-row"]')) {

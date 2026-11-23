@@ -1,3 +1,6 @@
+AvaStars Hire v6.1.1 (patch 29) - Chrome extension 1.2.1
+- Fix: "Indeed shows N job rows but none is posted" - Indeed draws placeholder rows first; the extension now waits until your jobs have finished loading
+
 AvaStars Hire v6.1 (patch 28) - Chrome extension 1.2
 - Fix: "Load my Indeed jobs" found no jobs, because Indeed only builds its lists in a visible tab. The collector now works in a visible tab (or the Indeed Jobs tab you already have open), waits longer, retries once and explains what it saw if it still can't read the list
 - Per-job choice of AvaStars job (remembered), "Only applicants since the last collect" per job, "last collected" date on each job, report lines link to the AvaStars profile
