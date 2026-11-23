@@ -1,3 +1,18 @@
+AvaStars Hire v6.1 (patch 28) - Chrome extension 1.2
+- Fix: "Load my Indeed jobs" found no jobs, because Indeed only builds its lists in a visible tab. The collector now works in a visible tab (or the Indeed Jobs tab you already have open), waits longer, retries once and explains what it saw if it still can't read the list
+- Per-job choice of AvaStars job (remembered), "Only applicants since the last collect" per job, "last collected" date on each job, report lines link to the AvaStars profile
+
+AvaStars Hire v6.0.1 (patch 27)
+- No more "Unknown" profiles: an applicant without a resume must have a name; page scans ignore nameless emails/phones (usually the recruiter's own details in the page header)
+
+AvaStars Hire v6.0 (patch 26) - Collect from Indeed
+- Chrome extension 1.1: "Load my Indeed jobs" lists your Indeed jobs with applicant counts; tick jobs, pick dates, "Collect & send" reads every applicant in range (all pages), downloads each resume and sends them to the matching AvaStars job
+- Options: all or only New applicants, max per run, skip people already sent, Stop button, run report
+- Names in capitals are stored in normal case; "Applied 9:50 am" counts as today
+
+AvaStars Hire v5.9.1 (patch 25)
+- Keys & connections: Show / Copy for keys the app generates (Inbound API key, cron secret, call webhook secret), to paste into the Chrome extension or Zapier
+
 AvaStars Hire v5.9 (patch 24) - Import applicants from Indeed / Naukri
 - Resumes > Import: upload the applicants file from any portal (CSV, .xlsx, the .xls Naukri gives), columns detected automatically, applied-date filter (Today / 7 days / 30 days / any range), preview, choose job (auto-match by job title), add resume files or ZIP
 - Paste from a page: copy a portal list, profile or email and the applicants are found

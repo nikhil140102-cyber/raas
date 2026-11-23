@@ -60,8 +60,41 @@
         <label class="row tiny"><input type="checkbox" id="undated" /> Also include people with no applied date shown</label>
       </div>
 
+    </section>
+
+    <section class="card" id="indeedCard">
+      <div class="row between">
+        <h2>Collect from Indeed</h2>
+        <button type="button" class="btn sm" id="loadIndeed">Load my Indeed jobs</button>
+      </div>
+      <p class="tiny muted" id="indeedHint">Lists your posted Indeed jobs. Tick the ones you want, check which AvaStars job each goes to, and every applicant in the dates above is sent with their resume.</p>
+      <div id="indeedJobs" class="list"></div>
+      <div id="indeedOpts" class="stack" hidden>
+        <div class="row">
+          <label class="field" style="flex:1">Applicants
+            <select id="indeedStatus"><option value="All">All applicants</option><option value="New">Only "New" (not yet reviewed)</option></select>
+          </label>
+          <label class="field" style="width:110px">Max per run
+            <select id="indeedMax"><option>25</option><option>50</option><option selected>100</option><option>200</option><option>300</option></select>
+          </label>
+        </div>
+        <label class="row tiny"><input type="checkbox" id="indeedResumes" checked /> Download each applicant's resume (gives the match %)</label>
+        <label class="row tiny"><input type="checkbox" id="indeedSkip" checked /> Skip people already sent from this Chrome</label>
+        <label class="row tiny"><input type="checkbox" id="indeedSince" /> Only applicants since the last collect (per job)</label>
+        <div class="row">
+          <button type="button" class="btn primary" id="collect" style="flex:1">Collect &amp; send</button>
+          <button type="button" class="btn" id="stopCollect" hidden>Stop</button>
+        </div>
+        <p class="tiny muted">It works in an Indeed tab you can see (Indeed only loads lists in a visible tab), at a normal human pace of a few seconds per person. Keep this panel open and let that tab stay in front until it says Done; you can use another Chrome window meanwhile.</p>
+      </div>
+      <div id="collectMsg" class="tiny strong" role="status" aria-live="polite"></div>
+      <div id="collectLog" class="report"></div>
+    </section>
+
+    <section class="card">
+      <h2>Any other page</h2>
       <button type="button" class="btn primary block" id="scan">Scan this page</button>
-      <p class="tiny muted">Tip: select part of the page first to read only that part. For lists with many pages, scan each page; results add up below.</p>
+      <p class="tiny muted">For Naukri, LinkedIn or any list or profile you have open. Tip: select part of the page first to read only that part. For lists with many pages, scan each page; results add up below.</p>
       <div id="scanMsg" class="tiny" role="status"></div>
     </section>
 
@@ -91,6 +124,8 @@
       <div id="catcherLog" class="list tiny"></div>
     </section>
   </main>
+  <script src="indeed.js"></script>
   <script src="panel.js"></script>
+  <script src="collect.js"></script>
 </body>
 </html>

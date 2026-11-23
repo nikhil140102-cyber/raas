@@ -46,7 +46,7 @@ export async function POST(req) {
   const autoJob = !jobId && ['1', 'true', 'yes'].includes(String(f.auto_job || '').toLowerCase());
   const skills = Array.isArray(f.skills) ? f.skills : clean(f.skills, 2000);
   const applicant = { ...f, skills, total_exp: f.total_exp ?? f.experience, applied_on: f.applied_on ?? f.applied_at };
-  if (!resume && !clean(f.name) && !clean(f.email) && !clean(f.phone)) return json({ error: 'Send a resume, or at least a name, email or phone.' }, 400);
+  if (!resume && !clean(f.name)) return json({ error: 'Send a resume, or at least the applicant\'s name.' }, 400);
   try {
     const r = await importApplicant({ applicant, resume, jobId, autoJob, jobs: autoJob || jobId ? await openJobs() : null, source, notes: clean(f.notes, 1000) });
     if (r.status === 'failed') return json({ ok: false, error: r.error }, 422);

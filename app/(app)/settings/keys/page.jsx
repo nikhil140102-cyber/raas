@@ -5,6 +5,7 @@ import { Header, Flash, Pill } from '@/components/ui';
 import { CONFIG_GROUPS, cfg, cfgSource, cfgBroken, mask } from '@/lib/config';
 import { fmtDate } from '@/lib/util';
 import { saveConfig } from '../../../_actions/config';
+import ShowKey from './ShowKey';
 
 export const metadata = { title: 'Keys & connections — AvaStars Hire' };
 const SRC = { app: ['Saved in app', 'green'], env: ['From Vercel', 'blue'], none: ['Not set', 'gray'] };
@@ -41,6 +42,7 @@ export default async function KeysPage({ searchParams }) {
                     ) : (
                       <input name={f.key} defaultValue={src === 'app' ? cur : ''} placeholder={src === 'env' ? `${cur} (from Vercel)` : f.placeholder || ''} aria-label={f.label} />
                     )}
+                    {f.generate && cur ? <ShowKey value={cur} label={f.label} /> : null}
                     <span className="row tiny" style={{ gap: 12 }}>
                       <code className="muted">{f.key}</code>
                       {f.generate ? <label className="check sm"><input type="checkbox" name={`gen_${f.key}`} value="1" /> Generate a new one</label> : null}
@@ -54,7 +56,7 @@ export default async function KeysPage({ searchParams }) {
         ))}
         <div className="row" style={{ gap: 10 }}>
           <button className="btn primary" type="submit">Save changes</button>
-          <span className="small muted">Secrets are encrypted in the database and never shown in full again. DATABASE_URL and AUTH_SECRET stay in Vercel.</span>
+          <span className="small muted">Secrets are encrypted in the database. Keys the app generates (inbound API, cron, webhook) can be shown and copied by admins; other keys are never shown in full again. DATABASE_URL and AUTH_SECRET stay in Vercel.</span>
         </div>
       </form>
       <section className="card">

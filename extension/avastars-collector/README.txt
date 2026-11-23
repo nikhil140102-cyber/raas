@@ -10,7 +10,14 @@ INSTALL (2 minutes)
      Inbound API key:  from AvaStars Hire > Settings > Keys & connections (Automation)
    and click "Save & test". It should say "Connected".
 
-USE
+COLLECT FROM INDEED (easiest)
+1. Be logged in to Indeed for Employers in this Chrome.
+2. In the side panel set "Applied between" (e.g. 7 days) and "Add them to" (Matching job is best).
+3. Click "Load my Indeed jobs", tick the jobs you want, and check the AvaStars job shown under each one.
+4. Click "Collect & send". It reads each job's applicants in your dates, opens each one,
+   takes the resume and sends it to AvaStars. Keep the panel open until it says Done.
+
+ANY OTHER PAGE (Naukri, LinkedIn...)
 1. Log in to Indeed / Naukri as usual and open the applicants list (or one candidate's profile).
 2. In the side panel choose the job and the applied dates (Today, 7 days, or any range).
 3. Click "Scan this page". For lists with several pages, open each page and scan again; results add up.

@@ -42,7 +42,8 @@ async function connect() {
     state.jobs = data.jobs || []; state.ai = Boolean(data.ai);
     $('conn').textContent = `Connected · ${state.jobs.length} open job(s) · AI ${state.ai ? 'on' : 'off'}`;
     $('conn').className = 'tiny ok';
-    fillJobs();
+    await fillJobs();
+    if (typeof renderIndeedJobs === 'function' && collector.jobs.length) renderIndeedJobs();
     return true;
   } catch (e) {
     $('conn').textContent = `Not connected: ${e.message}`; $('conn').className = 'tiny bad';
