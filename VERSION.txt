@@ -1,3 +1,11 @@
+AvaStars Hire v5.7 (patch 22) - Phase 1 fixes
+- Raw resume files are staff-only (clients get the redacted PDF only)
+- Clients can undo only their own decisions; cannot revive HR rejections
+- Booking accepts only offered slots; links close after rejection, selection or completion
+- Client review link shown to HR even when no client email is on file
+- Offer 'joined' moves the candidate to the new Joined stage
+- PostCSS security advisories fixed (patched version pinned; Next unchanged)
+
 AvaStars Hire v5.6 (patch 21)
 - Inbound Candidate API (/api/inbound/candidate) for Zapier, Make, n8n, Google Forms, websites and partners
 

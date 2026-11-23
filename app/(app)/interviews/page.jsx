@@ -22,7 +22,7 @@ export default async function InterviewsPage({ searchParams }) {
     SELECT a.id AS app_id, c.name, c.id AS cid, c.ectc, jb.title, cl.name AS client, o.* FROM applications a
     JOIN candidates c ON c.id = a.candidate_id JOIN jobs jb ON jb.id = a.job_id LEFT JOIN clients cl ON cl.id = jb.client_id
     LEFT JOIN offers o ON o.application_id = a.id
-    WHERE a.stage = 'selected' OR o.id IS NOT NULL ORDER BY o.updated_at DESC NULLS FIRST`);
+    WHERE a.stage IN ('selected','joined') OR o.id IS NOT NULL ORDER BY o.updated_at DESC NULLS FIRST`);
   const candidates = await q(`
     SELECT a.id, c.name, jb.title FROM applications a JOIN candidates c ON c.id = a.candidate_id JOIN jobs jb ON jb.id = a.job_id
     WHERE a.stage IN ('interview','forwarded','selected') ORDER BY (a.client_decision = 'yes') DESC NULLS LAST, a.updated_at DESC`);

@@ -13,6 +13,15 @@ export async function clientDecision(formData) {
   const decision = String(formData.get('decision'));
   const reason = String(formData.get('reason') || '').trim() || null;
   const comment = String(formData.get('comment') || '').trim() || null;
+  const cur = await one('SELECT stage, client_decision, reject_reason FROM applications WHERE id = $1', [appId]);
+  if (!cur) throw new Error('Candidate not found');
+  // Undo only the client's own decision; never revive a candidate HR rejected.
+  if (decision === 'undo') {
+    const own = (cur.client_decision === 'yes' && cur.stage === 'interview') || (cur.client_decision === 'no' && cur.stage === 'rejected' && String(cur.reject_reason || '').startsWith('Client'));
+    if (!own) throw new Error('Nothing of yours to undo for this candidate');
+  } else if (!(cur.stage === 'forwarded' && !cur.client_decision)) {
+    throw new Error('This candidate is not waiting for your feedback');
+  }
 
   if (decision === 'undo') {
     await q(`UPDATE applications SET client_decision = NULL, client_reason = NULL, client_comment = NULL, stage = 'forwarded', updated_at = now() WHERE id = $1`, [appId]);

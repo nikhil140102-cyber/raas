@@ -63,6 +63,8 @@ export async function saveOffer(formData) {
     [appId, num(formData.get('offered_ctc')), status, s(formData, 'joining_date'), s(formData, 'note')],
   );
   const app = await one('SELECT candidate_id FROM applications WHERE id = $1', [appId]);
+  if (status === 'joined') await q(`UPDATE applications SET stage = 'joined', updated_at = now() WHERE id = $1`, [appId]);
+  else if (['accepted', 'offered', 'negotiating'].includes(status)) await q(`UPDATE applications SET stage = 'selected', updated_at = now() WHERE id = $1 AND stage NOT IN ('selected','joined')`, [appId]);
   if (status === 'dropped') await q(`UPDATE applications SET stage = 'rejected', reject_reason = 'Candidate dropped out', updated_at = now() WHERE id = $1`, [appId]);
   await logActivity(app.candidate_id, appId, `Offer updated: ${status}.`);
   revalidatePath('/interviews');

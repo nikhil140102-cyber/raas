@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { one } from '@/lib/db';
 import PublicHeader from '@/components/PublicHeader';
-import { slotOptions } from '@/lib/screening';
+import { slotOptions, bookingOpen } from '@/lib/screening';
 import { fmtDate, ctcRange } from '@/lib/util';
 import SlotPicker from './SlotPicker';
 import { requestHumanPublic } from '../../_actions/screening';
@@ -26,6 +26,8 @@ export default async function BookPage({ params, searchParams }) {
     body = <div className="card"><h1 style={{ fontSize: 22 }}>Thanks, {first}</h1><p>A recruiter from AvaStars will call you personally.</p></div>;
   } else if (s.status === 'completed') {
     body = <div className="card"><h1 style={{ fontSize: 22 }}>Your screening call is done</h1><p>Thanks, {first}. Our recruiters will get back to you soon.</p></div>;
+  } else if (!(await bookingOpen(s))) {
+    body = <div className="card"><h1 style={{ fontSize: 22 }}>This link is no longer active</h1><p>Thanks for your interest, {first}. If you have questions, please reply to the message from your AvaStars recruiter.</p></div>;
   } else {
     body = (
       <>

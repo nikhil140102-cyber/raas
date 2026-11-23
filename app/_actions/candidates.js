@@ -48,7 +48,7 @@ export async function bulkAction(formData) {
     msg = `Slot requests sent to ${ids.length} candidate(s).`;
   } else if (action === 'share') {
     const r = await shareWithClient(jobId, ids);
-    msg = `Shortlist sent to the client. Feedback due ${r.due}.`;
+    msg = `${r.emailed ? `Shortlist emailed to ${r.emailed}` : 'Shortlist link created (no client email on file, so nothing was emailed)'}. Review link: ${appUrl(`/share/${r.token}`)} · feedback due ${r.due}.`;
   } else if (action === 'reject') {
     for (const id of ids) {
       const a = await one(`UPDATE applications SET stage = 'rejected', reject_reason = COALESCE(reject_reason, 'Not suitable'), updated_at = now() WHERE id = $1 RETURNING candidate_id`, [id]);
@@ -70,20 +70,21 @@ async function shareWithClient(jobId, appIds) {
     await logActivity(a.candidate_id, id, `Forwarded to ${job.client_name || 'the client'}.`);
   }
   const to = job.client_contact?.email || job.c_email;
-  await sendEmail({
+  if (to) await sendEmail({
     to,
     subject: `${appIds.length} candidate(s) for ${job.title} — feedback within 24 hours`,
     text: `Hi ${job.client_contact?.name || job.c_name || ''},\n\nWe have screened ${appIds.length} candidate(s) for ${job.title}. Please review them and shortlist or reject each one here:\n${appUrl(`/share/${t}`)}\n\nWe'd appreciate your feedback within 24 hours so we can update the candidates.\n\nAvaStars Recruitment`,
   });
-  return { token: t, due: due.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) };
+  return { token: t, emailed: to || null, due: due.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) };
 }
 
 export async function shareOne(formData) {
   await requirePerm('clients.share');
   const appId = num(formData.get('app_id'));
   const app = await one('SELECT * FROM applications WHERE id = $1', [appId]);
-  await shareWithClient(app.job_id, [appId]);
+  const r = await shareWithClient(app.job_id, [appId]);
   revalidatePath(`/candidates/${app.candidate_id}`);
+  redirect(`/candidates/${app.candidate_id}?app=${appId}&msg=${encodeURIComponent(`${r.emailed ? `Emailed to ${r.emailed}` : 'No client email on file, so nothing was emailed'}. Client review link: ${appUrl(`/share/${r.token}`)}`)}`);
 }
 
 export async function updateCandidate(formData) {

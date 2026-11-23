@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { q, one } from '@/lib/db';
-import { Header, Score, StagePill, Pill } from '@/components/ui';
+import { Header, Score, StagePill, Pill, Flash } from '@/components/ui';
 import { AutoSelect, ConfirmButton } from '@/components/client';
 import { STAGES, lakh, notice, fmtDate, initials, SCREENING_STATUS, REJECT_REASONS } from '@/lib/util';
 import { moveStage, updateCandidate, addCandidateToJob, rescore, shareOne, deleteCandidate } from '../../../_actions/candidates';
@@ -43,6 +43,7 @@ export default async function CandidatePage({ params, searchParams }) {
         {can(me, 'clients.share') ? <Link href={`/candidates/${c.id}/resume?app=${app?.id || ''}`} className="btn">Edit resume for client</Link> : null}
         {app && can(me, 'clients.share') ? <form action={shareOne}><input type="hidden" name="app_id" value={app.id} /><button className="btn primary" type="submit">Forward to client</button></form> : null}
       </Header>
+      <Flash msg={sp.msg} />
 
       {apps.length > 1 ? (
         <nav className="tabs" aria-label="Jobs for this candidate">

@@ -10,8 +10,15 @@ export async function portalDecision(formData) {
   const appId = num(formData.get('app_id'));
   const app = await one(`SELECT a.*, j.client_id FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = $1`, [appId]);
   if (!app || app.client_id !== me.client_id) throw new Error('Candidate not found');
-  if (!['forwarded', 'interview', 'rejected'].includes(app.stage)) throw new Error('This candidate is not waiting for your feedback');
   const decision = String(formData.get('decision'));
+  // Clients may decide only on candidates shared with them and still waiting, and undo only their own decision.
+  if (decision === 'undo') {
+    if (!app.client_decision) throw new Error('There is no decision of yours to undo');
+    if (app.client_decision === 'yes' && app.stage !== 'interview') throw new Error('This candidate has moved on; ask your recruiter');
+    if (app.client_decision === 'no' && !(app.stage === 'rejected' && String(app.reject_reason || '').startsWith('Client'))) throw new Error('This candidate has moved on; ask your recruiter');
+  } else if (!(app.stage === 'forwarded' && !app.client_decision)) {
+    throw new Error('This candidate is not waiting for your feedback');
+  }
   const reason = String(formData.get('reason') || '').trim() || null;
   const comment = String(formData.get('comment') || '').trim() || null;
   if (decision === 'undo') {
