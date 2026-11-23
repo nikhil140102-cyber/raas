@@ -1,3 +1,7 @@
+AvaStars Hire v6.3 (patch 31) - Extension 1.4: run dashboard
+- Live % done with time left, a "Sent to AvaStars" bar (new / updated / skipped / failed), a "Decision in AvaStars" bar (in pipeline / auto-rejected below cut-off / database only), match % spread and a per-job table; the last run stays visible
+- Inbound API reply now includes the pipeline stage and whether the candidate was auto-rejected
+
 AvaStars Hire v6.2 (patch 30) - Easy extension setup + bulk delete
 - New menu item "Chrome extension": download, add to Chrome, and one-click Connect (personal key per team member, no app address or API key to type); new team members see a set-up reminder on the dashboard until connected
 - Personal extension keys stop working when the user is deactivated; applicants are marked "sent by <name>"

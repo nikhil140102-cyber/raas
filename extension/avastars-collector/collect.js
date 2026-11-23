@@ -173,6 +173,7 @@ async function collect() {
   const sent = new Set(indeedSent);
   collector.running = true; collector.stop = false;
   $('collectMsg').textContent = 'Starting…'; $('collectMsg').className = 'tiny strong';
+  dash.reset('Indeed'); $('dashTitle').textContent = 'Collecting from Indeed';
   $('collect').disabled = true; $('loadIndeed').disabled = true; $('stopCollect').hidden = false;
   $('collectLog').replaceChildren();
   const tally = { created: 0, merged: 0, failed: 0, resumes: 0, skipped: 0 };
@@ -199,7 +200,7 @@ async function collect() {
           if (day && jobFrom && day < jobFrom) { older++; continue; }
           if (!day && (jobFrom || to) && !undated) continue;
           const cid = (() => { try { return new URL(r.href).searchParams.get('id') || r.href; } catch { return r.href; } })();
-          if (skipSent && sent.has(cid)) { tally.skipped++; continue; }
+          if (skipSent && sent.has(cid)) { tally.skipped++; dash.skip(1); continue; }
           if (!people.some((p) => p.cid === cid)) people.push({ ...r, day, cid });
         }
         $('collectMsg').textContent = `${job.title}: page ${pages + 1} read · ${people.length} in range${list.counter ? ` (${list.counter})` : ''}`;
@@ -210,6 +211,7 @@ async function collect() {
         await sleep(1500 + Math.random() * 1000);
       }
       const todo = people.slice(0, Math.max(0, max - total));
+      dash.addTotal(todo.length, job.title);
       logLine(`${job.title} → ${target.label}: ${todo.length} applicant(s) to send${jobFrom && jobFrom !== from ? ` (since last collect, ${jobFrom})` : ''}${people.length > todo.length ? ` (limit ${max} reached)` : ''}`);
       // 2) Open each applicant, take the resume, send to AvaStars.
       for (let i = 0; i < todo.length && !collector.stop; i++) {
@@ -235,9 +237,11 @@ async function collect() {
           const data = await call('/api/inbound/candidate', { method: 'POST', body: JSON.stringify(body) });
           const kind = data.status === 'merged' ? 'merged' : 'created';
           tally[kind]++; sent.add(p.cid);
+          dash.record(data, job.title, Boolean(body.resume_base64));
           logLine(`${p.name || 'Applicant'} — ${kind === 'merged' ? 'updated' : 'new'}${data.job ? ` · ${data.job}` : ''}${data.match !== null && data.match !== undefined ? ` · ${data.match}%` : ''}${note}`, 'ok', data.candidate_id);
         } catch (e) {
           tally.failed++;
+          dash.record(null, job.title, false);
           logLine(`${p.name || 'Applicant'} — failed: ${e.message}`, 'bad');
         }
         total++;
@@ -255,6 +259,8 @@ async function collect() {
     $('collectMsg').textContent = `Stopped: ${e.message}`; $('collectMsg').className = 'tiny strong bad';
   }
   await chrome.storage.local.set({ indeedSent: [...sent].slice(-5000) });
+  dash.finish(collector.stop);
+  $('dashTitle').textContent = 'Last run (Indeed)';
   await closeWorkTab(work);
   renderIndeedJobs();
   if (total) call('/api/inbound/run', { method: 'POST', body: JSON.stringify({ source: 'Indeed', total, created: tally.created, merged: tally.merged, failed: tally.failed, resumes: tally.resumes, from, to }) }).catch(() => {});

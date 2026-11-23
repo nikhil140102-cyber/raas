@@ -50,7 +50,10 @@ export async function POST(req) {
   try {
     const r = await importApplicant({ applicant, resume, jobId, autoJob, jobs: autoJob || jobId ? await openJobs() : null, source, notes: `${clean(f.notes, 900)}${auth.user ? ` (sent by ${auth.user.name})` : ''}`.trim() });
     if (r.status === 'failed') return json({ ok: false, error: r.error }, 422);
-    return json({ ok: true, status: r.status === 'created' ? 'new' : r.status, candidate_id: r.candidateId, job: r.job || null, match: r.score ?? null, resume: Boolean(resume) });
+    // Tell the caller what happened in the pipeline: pending (in the pipeline), rejected (below the job's cut-off) or no job.
+    const app = r.applicationId ? await one('SELECT stage, reject_reason FROM applications WHERE id = $1', [r.applicationId]) : null;
+    return json({ ok: true, status: r.status === 'created' ? 'new' : r.status, candidate_id: r.candidateId, job: r.job || null, match: r.score ?? null, resume: Boolean(resume),
+      stage: app?.stage || null, auto_rejected: Boolean(app && app.stage === 'rejected' && /^Low match/.test(app.reject_reason || '')) });
   } catch (e) {
     console.error(e);
     return json({ ok: false, error: e.message || 'Server error' }, 500);

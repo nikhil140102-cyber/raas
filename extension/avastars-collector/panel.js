@@ -207,6 +207,7 @@ async function send() {
   setBusy(true, 'send', 'Sending…');
   const job = $('job').value;
   const report = $('report'); report.replaceChildren();
+  dash.reset('Page scan'); $('dashTitle').textContent = 'Sending scanned applicants'; dash.addTotal(items.length);
   const tally = { created: 0, merged: 0, failed: 0, resumes: 0 };
   let next = 0;
   const worker = async () => {
@@ -226,9 +227,11 @@ async function send() {
         const data = await call('/api/inbound/candidate', { method: 'POST', body: JSON.stringify(body) });
         a.sent = data.status === 'merged' ? 'merged' : 'created';
         tally[a.sent]++;
+        dash.record(data, null, Boolean(body.resume_base64));
         line = [a.name || a.email, `${data.status === 'merged' ? 'Updated' : 'New'}${data.job ? ` · ${data.job}` : ''}${data.match !== null && data.match !== undefined ? ` · ${data.match}%` : ''}${r?.error ? ' · resume not attached' : ''}`, 'green'];
       } catch (e) {
         a.sent = 'failed'; tally.failed++;
+        dash.record(null, null, false);
         line = [a.name || a.email || 'Applicant', e.message, 'red'];
       }
       report.append(el('div', { class: 'logline tiny' }, el('span', { text: line[0] }), el('span', { class: `pill ${line[2]}`, text: line[1].slice(0, 60), title: line[1] })));
@@ -236,6 +239,7 @@ async function send() {
     }
   };
   await Promise.all([worker(), worker()]);
+  dash.finish(false); $('dashTitle').textContent = 'Last run (page scan)';
   report.prepend(el('div', { class: 'strong', text: `Done: ${tally.created} new · ${tally.merged} updated${tally.failed ? ` · ${tally.failed} failed` : ''}` }));
   // Failed ones stay selectable so they can be sent again.
   for (const a of items) if (a.sent === 'failed') delete a.sent;
@@ -276,6 +280,7 @@ async function init() {
   $('from').addEventListener('change', dateChanged); $('to').addEventListener('change', dateChanged); $('undated').addEventListener('change', dateChanged);
   markChips();
 
+  $('dashHide').addEventListener('click', () => { $('dashCard').hidden = true; });
   $('toggleSettings').addEventListener('click', () => showSettings($('settings').hidden));
   $('saveSettings').addEventListener('click', async () => {
     const url = $('appUrl').value.trim().replace(/\/+$/, '');

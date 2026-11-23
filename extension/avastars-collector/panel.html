@@ -33,6 +33,11 @@
   </section>
 
   <main id="main">
+    <section class="card" id="dashCard" hidden aria-live="polite">
+      <div class="row between"><h2 id="dashTitle">Run dashboard</h2><button type="button" class="btn ghost sm" id="dashHide">Hide</button></div>
+      <div id="dash" class="stack"></div>
+    </section>
+
     <section class="card">
       <div class="row between">
         <div>
@@ -126,6 +131,7 @@
     </section>
   </main>
   <script src="indeed.js"></script>
+  <script src="dash.js"></script>
   <script src="panel.js"></script>
   <script src="collect.js"></script>
 </body>
