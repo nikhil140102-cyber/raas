@@ -6,8 +6,8 @@ export const maxDuration = 60;
 
 /** Finds applicants in text from a portal page (sent by the Chrome extension). Nothing is saved here. */
 export async function POST(req) {
-  const bad = inboundGuard(req);
-  if (bad) return bad;
+  const auth = await inboundGuard(req);
+  if (auth.res) return auth.res;
   let body;
   try { body = await req.json(); } catch { return json({ error: 'Send JSON: {"text": "...", "url": "...", "source": "Indeed"}' }, 400); }
   const text = String(body?.text || '');

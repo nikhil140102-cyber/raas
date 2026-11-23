@@ -11,11 +11,14 @@ import FilterBar from '@/components/FilterBar';
 import { ColSelect } from '@/components/ColFilter';
 import BulkJobBar, { SelectAll, Tick } from '@/components/BulkJobBar';
 import { readFilters, candidateWhere, orderBy, sortHref } from '@/lib/filters';
+import { requireUser } from '@/lib/auth';
+import { can } from '@/lib/roles';
 
 export const metadata = { title: 'Resume database — AvaStars Hire' };
 
 export default async function ResumesPage({ searchParams }) {
   const sp = await searchParams;
+  const me = await requireUser();
   const f = readFilters(sp);
   const page = Math.max(1, Number(sp.page || 1));
   const forJob = Number(sp.job) || null;
@@ -101,7 +104,7 @@ export default async function ResumesPage({ searchParams }) {
       <section className="card flush">
         <FilterBar base="/resumes" f={f} jobs={jobs} jobId={forJob} showJobPicker defaultSort={defaultSort} id={F} columnFilters />
         <div className="row small muted" style={{ padding: '0 20px 12px' }}>Showing {total.n} of {all.n}{forJob && job ? ` · match % for ${job.title}` : ''}. Click a column title to sort; type in the boxes under the titles and press Enter to filter.</div>
-        <BulkJobBar jobs={jobs} back={`/resumes${Object.keys(spNoUpload).length ? `?${new URLSearchParams(Object.fromEntries(Object.entries(spNoUpload).filter(([k]) => k !== 'msg')))}` : ''}`} stages={[['pending', 'Pending'], ['shortlisted', 'Shortlisted']]} />
+        <BulkJobBar jobs={jobs} back={`/resumes${Object.keys(spNoUpload).length ? `?${new URLSearchParams(Object.fromEntries(Object.entries(spNoUpload).filter(([k]) => k !== 'msg')))}` : ''}`} stages={[['pending', 'Pending'], ['shortlisted', 'Shortlisted']]} canDelete={can(me, 'candidates.delete')} />
         {(
           <div className="tablewrap">
             <table className="t" style={{ minWidth: 1150 }}>

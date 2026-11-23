@@ -147,6 +147,19 @@ export async function deleteCandidate(formData) {
   redirect('/resumes?msg=' + encodeURIComponent('Candidate deleted.'));
 }
 
+/** Resume database: delete the ticked candidates (and their applications, files and history). Admin / HR only. */
+export async function deleteSelectedCandidates(formData) {
+  const me = await requirePerm('candidates.delete');
+  const ids = [...new Set(formData.getAll('cand').map(Number).filter(Boolean))].slice(0, 500);
+  const back = String(formData.get('back') || '/resumes');
+  const go = (msg) => redirect(`${back}${back.includes('?') ? '&' : '?'}msg=${encodeURIComponent(msg)}`);
+  if (!ids.length) go('Tick at least one candidate first.');
+  const rows = await q('DELETE FROM candidates WHERE id = ANY($1::int[]) RETURNING id', [ids]);
+  console.log(`[audit] ${me.name} deleted ${rows.length} candidate(s): ${rows.map((r) => r.id).join(',')}`);
+  revalidatePath('/resumes'); revalidatePath('/pipeline');
+  go(`${rows.length} candidate(s) deleted.`);
+}
+
 /** Resume database: put the ticked candidates into one job's pipeline (Pending or Shortlisted), whatever their match %. */
 export async function addSelectedToJob(formData) {
   const me = await requirePerm('candidates.edit');

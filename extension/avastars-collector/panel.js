@@ -35,12 +35,12 @@ async function call(path, options = {}) {
 }
 
 async function connect() {
-  if (!state.appUrl || !state.apiKey) { $('conn').textContent = 'Not connected — open Settings'; showSettings(true); return false; }
+  if (!state.appUrl || !state.apiKey) { $('conn').textContent = 'Not connected: in AvaStars open "Chrome extension" and click Connect'; showSettings(true); return false; }
   $('conn').textContent = 'Connecting…';
   try {
     const data = await call('/api/inbound/jobs');
     state.jobs = data.jobs || []; state.ai = Boolean(data.ai);
-    $('conn').textContent = `Connected · ${state.jobs.length} open job(s) · AI ${state.ai ? 'on' : 'off'}`;
+    $('conn').textContent = `Connected${data.user ? ` as ${data.user}` : ''} · ${state.jobs.length} open job(s) · AI ${state.ai ? 'on' : 'off'}`;
     $('conn').className = 'tiny ok';
     await fillJobs();
     if (typeof renderIndeedJobs === 'function' && collector.jobs.length) renderIndeedJobs();
@@ -302,7 +302,15 @@ async function init() {
   $('selAll').addEventListener('click', () => { for (const a of visible()) state.skip.delete(keyOf(a)); saveList(); render(); });
   $('selNone').addEventListener('click', () => { for (const a of visible()) state.skip.add(keyOf(a)); saveList(); render(); });
   $('catcher').addEventListener('change', () => chrome.storage.local.set({ catcher: $('catcher').checked }));
-  chrome.storage.onChanged.addListener((changes) => { if (changes.catcherLog) renderCatcher(); });
+  chrome.storage.onChanged.addListener(async (changes) => {
+    if (changes.catcherLog) renderCatcher();
+    if (changes.appUrl || changes.apiKey) { // connected from the AvaStars "Chrome extension" page
+      const cur = await chrome.storage.local.get(['appUrl', 'apiKey']);
+      state.appUrl = cur.appUrl || ''; state.apiKey = cur.apiKey || '';
+      $('appUrl').value = state.appUrl; $('apiKey').value = state.apiKey ? '••••••••' : '';
+      if (await connect()) showSettings(false);
+    }
+  });
   chrome.tabs.onActivated.addListener(refreshTab);
   chrome.tabs.onUpdated.addListener((id, info) => { if (id === state.tab?.id && (info.url || info.status === 'complete')) refreshTab(); });
 

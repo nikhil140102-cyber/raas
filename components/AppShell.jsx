@@ -15,6 +15,7 @@ const NAV = [
   ['/pipeline', 'Pipeline', 'kanban'],
   ['/screening', 'AI screening', 'phone'],
   ['/interviews', 'Interviews', 'calendar'],
+  ['/extension', 'Chrome extension', 'puzzle'],
   ['/settings', 'Settings', 'settings'],
 ];
 

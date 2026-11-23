@@ -1,12 +1,10 @@
 import Link from 'next/link';
 import { q } from '@/lib/db';
 import { requirePagePerm } from '@/lib/auth';
-import { can } from '@/lib/roles';
-import { cfg } from '@/lib/config';
 import { aiEnabled } from '@/lib/ai';
 import { openJobs } from '@/lib/importer';
-import { appUrl, fmtDate } from '@/lib/util';
-import { Header, Flash, Pill } from '@/components/ui';
+import { fmtDate } from '@/lib/util';
+import { Header, Flash } from '@/components/ui';
 import Importer from './Importer';
 
 export const metadata = { title: 'Import applicants — AvaStars Hire' };
@@ -16,7 +14,6 @@ export default async function ImportPage({ searchParams }) {
   const me = await requirePagePerm('candidates.edit', '/resumes');
   const jobs = await openJobs();
   const runs = await q('SELECT * FROM import_runs ORDER BY id DESC LIMIT 8');
-  const keySet = Boolean(cfg('INBOUND_API_KEY'));
   return (
     <>
       <Header title="Import applicants" sub="Bring in people who applied on Indeed, Naukri, LinkedIn or any other portal — with a date filter — and put them on the right job." crumbs={<><Link href="/resumes">Resumes</Link> / Import</>} />
@@ -27,18 +24,9 @@ export default async function ImportPage({ searchParams }) {
       <div className="grid3">
         <section className="card">
           <h2>Chrome extension: one-click collect</h2>
-          <p className="small muted">The <strong>AvaStars Collector</strong> adds a side panel in Chrome. Open your Indeed or Naukri applicants page, pick the dates, click <em>Scan this page</em>, then <em>Send to AvaStars</em>. It can also send each resume you download.</p>
-          <a className="btn primary sm" href="/avastars-collector.zip" download>Download the extension (.zip)</a>
-          <ol className="small" style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
-            <li>Unzip it to a folder you&apos;ll keep (e.g. Documents\avastars-collector).</li>
-            <li>Open <code>chrome://extensions</code>, turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong> and pick that folder.</li>
-            <li>Click the AvaStars icon → <strong>Settings</strong>, paste the app address <code>{appUrl('')}</code> and the Inbound API key.</li>
-          </ol>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <span className="small">Inbound API key</span>
-            {keySet ? <Pill tone="green">Set</Pill> : <Pill tone="amber">Not set</Pill>}
-          </div>
-          {!keySet ? <p className="tiny muted">{can(me, 'secrets.manage') ? <>Add it in <Link href="/settings/keys">Settings → Keys & connections</Link> (Automation).</> : 'Ask an admin to add the Inbound API key.'}</p> : can(me, 'secrets.manage') ? <p className="tiny muted">Find or change it in <Link href="/settings/keys">Keys & connections</Link>.</p> : <p className="tiny muted">Ask an admin for the key.</p>}
+          <p className="small muted">The <strong>AvaStars Collector</strong> adds a side panel in Chrome. Pick the dates, click <em>Load my Indeed jobs</em>, tick jobs and <em>Collect &amp; send</em>: every applicant comes in with their resume. On Naukri or any other page, use <em>Scan this page</em>.</p>
+          <Link className="btn primary sm" href="/extension">{me.ext_connected_at ? 'Extension: download & reconnect' : 'Set up the extension (2 min)'}</Link>
+          <p className="tiny muted">Download, add to Chrome and connect with one click: no app address or API key to type.{me.ext_connected_at ? ' You have connected it already.' : ''}</p>
         </section>
         <section className="card">
           <h2>Which way to use</h2>

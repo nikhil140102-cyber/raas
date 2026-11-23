@@ -1,3 +1,9 @@
+AvaStars Hire v6.2 (patch 30) - Easy extension setup + bulk delete
+- New menu item "Chrome extension": download, add to Chrome, and one-click Connect (personal key per team member, no app address or API key to type); new team members see a set-up reminder on the dashboard until connected
+- Personal extension keys stop working when the user is deactivated; applicants are marked "sent by <name>"
+- Extension 1.3: detects the app, connects from the app page, shows "Connected as <name>"
+- Resume database: tick candidates and "Delete selected" (Admin / HR, with confirmation)
+
 AvaStars Hire v6.1.1 (patch 29) - Chrome extension 1.2.1
 - Fix: "Indeed shows N job rows but none is posted" - Indeed draws placeholder rows first; the extension now waits until your jobs have finished loading
 

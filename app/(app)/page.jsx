@@ -65,6 +65,12 @@ export default async function Dashboard({ searchParams }) {
       </section>
 
       <Flash msg={sp.msg} />
+      {!me.ext_connected_at && can(me, 'candidates.edit') ? (
+        <div className="notice info row" style={{ justifyContent: 'space-between', gap: 12 }}>
+          <span><strong>New here?</strong> Set up the AvaStars Chrome extension to collect Indeed applicants in one click. It takes about 2 minutes.</span>
+          <Link href="/extension" className="btn primary sm">Set up the extension</Link>
+        </div>
+      ) : null}
       {jobs.n === 0 && can(me, 'jobs.edit') ? (
         <form action={loadSample} className="card" style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="titles"><h2>Welcome to AvaStars Hire</h2><p className="small muted">Start with a real requirement, or load sample data to try every screen first.</p></div>

@@ -16,8 +16,8 @@ export const maxDuration = 60;
 const clean = (v, max = 200) => (v === null || v === undefined ? '' : String(v).trim().slice(0, max));
 
 export async function POST(req) {
-  const bad = inboundGuard(req);
-  if (bad) return bad;
+  const auth = await inboundGuard(req);
+  if (auth.res) return auth.res;
 
   let f = {}; let resume = null;
   const type = req.headers.get('content-type') || '';
@@ -48,7 +48,7 @@ export async function POST(req) {
   const applicant = { ...f, skills, total_exp: f.total_exp ?? f.experience, applied_on: f.applied_on ?? f.applied_at };
   if (!resume && !clean(f.name)) return json({ error: 'Send a resume, or at least the applicant\'s name.' }, 400);
   try {
-    const r = await importApplicant({ applicant, resume, jobId, autoJob, jobs: autoJob || jobId ? await openJobs() : null, source, notes: clean(f.notes, 1000) });
+    const r = await importApplicant({ applicant, resume, jobId, autoJob, jobs: autoJob || jobId ? await openJobs() : null, source, notes: `${clean(f.notes, 900)}${auth.user ? ` (sent by ${auth.user.name})` : ''}`.trim() });
     if (r.status === 'failed') return json({ ok: false, error: r.error }, 422);
     return json({ ok: true, status: r.status === 'created' ? 'new' : r.status, candidate_id: r.candidateId, job: r.job || null, match: r.score ?? null, resume: Boolean(resume) });
   } catch (e) {
