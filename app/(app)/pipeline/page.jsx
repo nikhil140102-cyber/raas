@@ -10,6 +10,7 @@ import MatchRunner from '@/components/MatchRunner';
 import FilterBar from '@/components/FilterBar';
 import { readFilters, candidateWhere, orderBy, activeFilterCount, SORTS } from '@/lib/filters';
 import JobsView from './JobsView';
+import CardFold, { FoldAll } from '@/components/CardFold';
 
 function ViewSwitch({ view }) {
   return (
@@ -100,6 +101,7 @@ export default async function PipelinePage({ searchParams }) {
           <button className="btn sm" type="submit" name="bulk" value="slot">Ask for AI call slot</button>
           {can(me, 'clients.share') ? <button className="btn sm primary" type="submit" name="bulk" value="share">Send to client</button> : null}
           <button className="btn sm danger" type="submit" name="bulk" value="reject">Reject</button>
+          <span style={{ marginLeft: 'auto' }}><FoldAll /></span>
         </div>
         <div className="board-wrap">
           <div className="board">
@@ -112,17 +114,16 @@ export default async function PipelinePage({ searchParams }) {
                 {byStage[st.id].slice(0, 60).map((a) => {
                   const tag = cardTag(a);
                   return (
-                    <div key={a.id} className="pcard">
-                      <div className="top">
-                        <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', minWidth: 0 }}>
-                          <input type="checkbox" name="app" value={a.id} style={{ width: 18, height: 18, marginTop: 2, accentColor: 'var(--accent)' }} aria-label={`Select ${a.name}`} />
-                          <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                            <Link href={`/candidates/${a.candidate_id}?app=${a.id}`} className="nm">{a.name}</Link>
-                            <span className="tiny muted">{[a.current_title, a.current_company].filter(Boolean).join(' · ') || '—'}</span>
-                          </span>
+                    <CardFold key={a.id} label={a.name} head={(
+                      <>
+                        <label style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0, flex: 1 }}>
+                          <input type="checkbox" name="app" value={a.id} style={{ width: 18, height: 18, flex: 'none', accentColor: 'var(--accent)' }} aria-label={`Select ${a.name}`} />
+                          <Link href={`/candidates/${a.candidate_id}?app=${a.id}`} className="nm">{a.name}</Link>
                         </label>
                         <Score value={a.match_score} />
-                      </div>
+                      </>
+                    )}>
+                      <span className="tiny muted">{[a.current_title, a.current_company].filter(Boolean).join(' · ') || '—'}</span>
                       <div className="mini">
                         <div><span>CCTC</span><span>{lakh(a.cctc)}</span></div>
                         <div><span>ECTC</span><span>{lakh(a.ectc)}</span></div>
@@ -134,7 +135,7 @@ export default async function PipelinePage({ searchParams }) {
                         {tag ? <span className={`pill ${tag[1]}`} style={{ height: 22, fontSize: 11 }}>{tag[0]}</span> : null}
                       </div>
                       {canMoveTo(me, a.stage) ? <AutoSelect action={moveStage} name="stage" value={a.stage} options={stageOptions} hidden={{ app_id: a.id }} /> : null}
-                    </div>
+                    </CardFold>
                   );
                 })}
                 {byStage[st.id].length > 60 ? <span className="tiny muted">+{byStage[st.id].length - 60} more — use the filters</span> : null}

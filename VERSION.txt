@@ -1,3 +1,6 @@
+AvaStars Hire v6.3.1 (patch 32)
+- Pipeline cards are compact: name and ATS match % only; the arrow on the right shows or hides the details (title, CCTC/ECTC, notice, source, location, stage). "Show all / Hide all card details" button, remembered in this browser
+
 AvaStars Hire v6.3 (patch 31) - Extension 1.4: run dashboard
 - Live % done with time left, a "Sent to AvaStars" bar (new / updated / skipped / failed), a "Decision in AvaStars" bar (in pipeline / auto-rejected below cut-off / database only), match % spread and a per-job table; the last run stays visible
 - Inbound API reply now includes the pipeline stage and whether the candidate was auto-rejected
