@@ -1,3 +1,6 @@
+AvaStars Hire v6.4 (patch 33) - Extension 1.5: LinkedIn messages
+- A "Send to AvaStars" button appears under every resume (PDF / Word) someone sends you in LinkedIn chat (full Messaging page and small chat windows). One click adds the person (name + LinkedIn profile link) and the resume, source LinkedIn, into the job chosen in the side panel; shows "Sent ✓ · match %" and remembers files already sent
+
 AvaStars Hire v6.3.1 (patch 32)
 - Pipeline cards are compact: name and ATS match % only; the arrow on the right shows or hides the details (title, CCTC/ECTC, notice, source, location, stage). "Show all / Hide all card details" button, remembered in this browser
 

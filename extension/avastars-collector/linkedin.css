@@ -1,0 +1,8 @@
+.avs-send-btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; margin: 6px 0 2px; padding: 0 12px; height: 30px; border-radius: 15px; background: #4F46E5; color: #fff !important; font: 600 13px/30px -apple-system, "Segoe UI", Roboto, sans-serif; cursor: pointer; }
+.avs-send-btn::before { content: "A"; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: #fff; color: #4F46E5; font-size: 11px; font-weight: 800; line-height: 18px; }
+.avs-send-btn:hover { background: #3730A3; }
+.avs-send-btn:focus-visible { outline: 2px solid #4F46E5; outline-offset: 2px; }
+.avs-send-btn.busy { background: #6B7280; cursor: progress; }
+.avs-send-btn.done { background: #ECFDF3; color: #067647 !important; cursor: default; }
+.avs-send-btn.done::before { background: #067647; color: #fff; }
+.avs-send-btn.bad { background: #FEF3F2; color: #B42318 !important; }

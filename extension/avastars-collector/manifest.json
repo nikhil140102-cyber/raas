@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AvaStars Collector",
-  "version": "1.4.0",
-  "description": "Send job applicants from Indeed, Naukri and other portals to AvaStars Hire, with a date filter.",
+  "version": "1.5.0",
+  "description": "Send job applicants from Indeed, LinkedIn messages and other portals to AvaStars Hire.",
   "action": {
     "default_title": "AvaStars Collector",
     "default_icon": {
@@ -37,7 +37,8 @@
     "https://*.foundit.in/*",
     "https://*.shine.com/*",
     "https://*.apna.co/*",
-    "https://*.workindia.in/*"
+    "https://*.workindia.in/*",
+    "https://*.licdn.com/*"
   ],
   "optional_host_permissions": [
     "https://*/*",
@@ -52,6 +53,18 @@
       ],
       "js": [
         "connect.js"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.linkedin.com/*"
+      ],
+      "js": [
+        "linkedin.js"
+      ],
+      "css": [
+        "linkedin.css"
       ],
       "run_at": "document_idle"
     }
