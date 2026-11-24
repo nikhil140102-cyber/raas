@@ -211,7 +211,7 @@
   // We never click Connect. When YOU click LinkedIn's Connect (on a profile or a search result) and the
   // button turns into "Pending", the request is recorded in AvaStars (Sourcing → Connection requests).
   document.addEventListener('click', (e) => {
-    const b = e.target.closest?.('button, a');
+    const b = e.target.closest?.('button, a, [role="button"], [role="menuitem"]');
     if (!b) return;
     const label = clean(`${b.getAttribute('aria-label') || ''} ${b.textContent || ''}`);
     if (!/^(invite .+ to connect|connect)\b/i.test(label) || /avs-/.test(b.className)) return;
@@ -226,7 +226,7 @@
     const check = setInterval(async () => {
       tries++;
       const pending = [...scope.querySelectorAll('button, span')].some((x) => /^pending$|withdraw invitation|invitation sent/i.test(clean(x.getAttribute?.('aria-label') || x.textContent)));
-      if (pending || tries > 30) {
+      if (pending || tries > 120) { // up to 2 min: LinkedIn first asks "Add a note?" before sending
         clearInterval(check);
         if (!pending) return;
         const { sentInvites = {} } = await chrome.storage.local.get('sentInvites');

@@ -69,3 +69,19 @@ export async function saveFoundPerson(person, jobId, connect) {
   revalidatePath('/sourcing');
   return { id: r.id, match: r.match };
 }
+
+/** The Sourcing table checks this when you come back from LinkedIn: did the extension see the request go out? */
+export async function connectStatus(profileUrl) {
+  await requirePerm('candidates.edit');
+  const r = await one(`SELECT id, connect_sent_at FROM candidates WHERE lower(rtrim(profile_url, '/')) = lower(rtrim($1, '/')) ORDER BY connect_sent_at DESC NULLS LAST LIMIT 1`, [String(profileUrl || '')]);
+  return { id: r?.id || null, sent: r?.connect_sent_at ? new Date(r.connect_sent_at).toISOString() : null };
+}
+
+/** "I sent it" (manual) or "Undo" for one person in the Sourcing table. */
+export async function setConnectSent(id, sent) {
+  const fd = new FormData();
+  fd.set('cand_id', String(id));
+  if (!sent) fd.set('undo', '1');
+  await markConnectSent(fd);
+  return { ok: true };
+}

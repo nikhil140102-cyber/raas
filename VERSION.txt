@@ -1,3 +1,10 @@
+AvaStars Hire v6.7.3 (patch 43) + extension 1.7.4
+- Sourcing: "Connect on LinkedIn" now only opens the profile. It no longer marks "Request sent" by itself
+- The row shows "Waiting for Connect on LinkedIn…" until the extension sees LinkedIn's button turn to Pending, then switches to "Request sent" when you come back to the tab
+- "I sent it" button (record by hand) and "Undo" (remove a wrong "Request sent")
+- One spelling for LinkedIn profile links, so the extension and the search results match the same person
+- Extension: catches Connect inside LinkedIn's "More" menu and waits up to 2 minutes for "Add a note?"
+
 AvaStars Hire v6.7.2 (patch 42)
 - Fix: picking a job and leaving Title / Skills / Location empty didn't search at all. Empty boxes now use the job's title, top skills and city (and the boxes show them)
 - "Only open to work" tick box is read correctly; up to 8 search credits per search to reach 20 people; clearer message if the search service can't be reached
