@@ -27,17 +27,17 @@ export default async function SourcingPage({ searchParams }) {
   const links = searched ? sourcingLinks({ skills: skillsText.split(','), title, location, openToWork }) : [];
   // New people: Google results for public LinkedIn profiles (Serper.dev). Cached for a day so repeat searches cost nothing.
   const serperKey = cfg('SERPER_API_KEY');
-  let found = null; let foundError = ''; let fromCache = false;
+  let found = null; let foundError = ''; let fromCache = false; let tried = [];
   if (searched && serperKey && sp.find !== '0') {
     const args = { skills: skillsText.split(','), title, location, openToWork, want: 20 };
     const key = `serp:${createHash('sha1').update(JSON.stringify(args).toLowerCase()).digest('hex')}`;
     const cached = await getSetting(key, null);
-    if (cached && cached.at > Date.now() - 24 * 3600 * 1000 && sp.fresh !== '1') { found = cached.people; fromCache = true; }
+    if (cached && cached.at > Date.now() - 24 * 3600 * 1000 && sp.fresh !== '1') { found = cached.people; tried = cached.queries || []; fromCache = true; }
     else {
       try {
         const r = await findPeople({ apiKey: serperKey, ...args });
-        found = r.people;
-        await setSetting(key, { at: Date.now(), people: found });
+        found = r.people; tried = r.queries || [];
+        await setSetting(key, { at: Date.now(), people: found, queries: tried });
         const used = (await getSetting('serper_used', 0)) + r.used;
         await setSetting('serper_used', used);
       } catch (e) { foundError = e.message; }
@@ -134,6 +134,15 @@ export default async function SourcingPage({ searchParams }) {
                   </table>
                 </div>
               ) : <p className="small muted">No public LinkedIn profiles matched. Try fewer skills, untick &quot;open to work&quot;, or a nearby city.</p>}
+              {tried.length ? (
+                <details className="tiny muted">
+                  <summary style={{ cursor: 'pointer' }}>How we searched ({tried.length} {tried.length === 1 ? 'search' : 'searches'})</summary>
+                  <ol style={{ margin: '6px 0 0', paddingLeft: 18, display: 'grid', gap: 4 }}>
+                    {tried.map((t, i) => <li key={i}><code style={{ wordBreak: 'break-word' }}>{t.q}</code> → {t.results} result(s)</li>)}
+                  </ol>
+                  <p style={{ margin: '6px 0 0' }}>When the first search finds too few people, the next one is wider (fewer skills, then without &quot;open to work&quot;, then without the exact title).</p>
+                </details>
+              ) : null}
               <p className="tiny muted" style={{ margin: 0 }}>Found through Google&apos;s public search results, not by reading LinkedIn. &quot;Connect on LinkedIn&quot; opens the profile and records the request: click LinkedIn&apos;s own Connect there. Skill match = how many of your skills Google&apos;s snippet mentions; save the person to get a full match %.</p>
             </section>
           ) : null}

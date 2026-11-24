@@ -1,3 +1,7 @@
+AvaStars Hire v6.7.1 (patch 41)
+- Find people: if the strict search (open to work + title + all skills + city) finds too few, it widens step by step (fewer skills → without "open to work" → without the exact title), up to 6 searches; best skill matches first
+- "How we searched" under the table shows each search and how many results Google gave
+
 AvaStars Hire v6.7 (patch 40) - Sourcing finds new people
 - Sourcing → "Find people": lists up to 20 NEW matching people (public LinkedIn profiles found through Google search via Serper.dev) with headline, location, open-to-work, skill match and "In AvaStars" tag; each row has Save and "Connect on LinkedIn" (opens the profile, records the request in the connection log)
 - Results are kept for a day, so repeating a search uses no credits; credits used are shown
