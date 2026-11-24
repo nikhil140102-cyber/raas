@@ -1,3 +1,11 @@
+AvaStars Hire v6.6.3 (patch 39) - Extension 1.7.3: LinkedIn job form filling
+- "Post on LinkedIn" opens LinkedIn's free job-post page (the old link went to the Recruiter login)
+- "Fill this page" now handles LinkedIn's form: job title on the start page (picks the suggestion), then on the draft opens "Edit job details" and fills Job title, Company (only if LinkedIn has that exact company page), Workplace type (On-site / Hybrid / Remote), Job location (picks the city, e.g. "Pune City, Maharashtra, India"), Job type and the description; on Job settings fills the apply link when "On an external website" is chosen
+- The message lists what was filled and what wasn't, with the next step
+
+AvaStars Hire v6.6.2 (patch 38) - Extension 1.7.2
+- Fix: "Frame with ID 0 was removed" when a portal page reloads or redirects (Indeed login, Post a job, applicant pages). The extension now waits for the page to finish loading and tries again, and "Fill this page" retries once if the form wasn't drawn yet
+
 AvaStars Hire v6.6.1 (patch 37) - Extension 1.7.1
 - The extension starts with the app address (https://raas-drab.vercel.app) filled in. A private test copy can also carry the Inbound API key (kept out of GitHub, as the repository is public)
 

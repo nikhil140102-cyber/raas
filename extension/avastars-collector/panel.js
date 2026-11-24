@@ -25,6 +25,30 @@ function el(tag, attrs = {}, ...kids) {
   return n;
 }
 
+
+/**
+ * Runs a function inside a tab. If the page is in the middle of loading or redirecting
+ * (Chrome: "Frame with ID 0 was removed" / "No frame"), waits for it to settle and tries again.
+ */
+async function runInTab(tabId, func, args = [], tries = 6) {
+  for (let i = 1; ; i++) {
+    try {
+      const [res] = await chrome.scripting.executeScript({ target: { tabId }, func, args });
+      return res?.result;
+    } catch (e) {
+      const moving = /frame with id \d+ (was|is) removed|no frame with id|frame was removed|document.*(unloaded|removed)|tab was discarded|Cannot access contents of url "about:blank"/i.test(e.message || '');
+      if (!moving || i >= tries) throw e;
+      for (let w = 0; w < 20; w++) { // wait up to ~10 s for the page to finish loading
+        const t = await chrome.tabs.get(tabId).catch(() => null);
+        if (!t) throw new Error('The tab was closed.');
+        if (t.status === 'complete') break;
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      await new Promise((r) => setTimeout(r, 800 * i));
+    }
+  }
+}
+
 // ------------------------------------------------------------------ connection
 const api = (path) => `${state.appUrl.replace(/\/+$/, '')}${path}`;
 async function call(path, options = {}) {
@@ -101,7 +125,7 @@ async function scan() {
   try {
     let page;
     try {
-      [{ result: page }] = await chrome.scripting.executeScript({ target: { tabId: state.tab.id }, func: grabPage });
+      page = await runInTab(state.tab.id, grabPage);
     } catch (e) {
       $('permBox').hidden = false;
       throw new Error('This page can\'t be read yet. Click "Allow on this site" and scan again.');
@@ -194,7 +218,7 @@ function fetchInPage(url) {
 
 async function resumeFor(a) {
   if (!state.resumeFor || keyOf(a) !== state.resumeFor || !$('attachResume').checked || !state.tab?.id) return null;
-  const [{ result }] = await chrome.scripting.executeScript({ target: { tabId: state.tab.id }, func: fetchInPage, args: [$('resumeLink').value] });
+  const result = await runInTab(state.tab.id, fetchInPage, [$('resumeLink').value]);
   if (!result || result.error) return { error: result?.error || 'could not download' };
   let name = result.name;
   if (!/\.\w{2,4}$/.test(name)) name += /pdf/.test(result.mime) ? '.pdf' : /word|officedocument/.test(result.mime) ? '.docx' : '';

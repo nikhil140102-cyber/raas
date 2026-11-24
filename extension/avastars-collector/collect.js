@@ -70,8 +70,7 @@ async function go(tabId, url) {
 }
 async function inTab(tabId, func, args = []) {
   await chrome.tabs.update(tabId, { active: true }).catch(() => {});
-  const [res] = await chrome.scripting.executeScript({ target: { tabId }, func, args });
-  return res?.result;
+  return runInTab(tabId, func, args);
 }
 
 // ------------------------------------------------------------------ jobs list
