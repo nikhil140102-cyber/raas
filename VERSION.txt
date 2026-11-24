@@ -1,3 +1,6 @@
+AvaStars Hire v6.4.1 (patch 34) - Extension 1.5.1
+- Fix: the LinkedIn chat "Send to AvaStars" button didn't appear, because LinkedIn shows files as a download button with no link. The button now appears under every PDF/Word resume; clicking it catches LinkedIn's own download and sends the file to AvaStars instead of saving it (photos and other files are skipped)
+
 AvaStars Hire v6.4 (patch 33) - Extension 1.5: LinkedIn messages
 - A "Send to AvaStars" button appears under every resume (PDF / Word) someone sends you in LinkedIn chat (full Messaging page and small chat windows). One click adds the person (name + LinkedIn profile link) and the resume, source LinkedIn, into the job chosen in the side panel; shows "Sent ✓ · match %" and remembers files already sent
 

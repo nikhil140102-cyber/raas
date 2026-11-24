@@ -31,6 +31,7 @@ chrome.downloads.onChanged.addListener(async (delta) => {
   if (delta.state?.current !== 'complete') return;
   const cfg = await chrome.storage.local.get(['appUrl', 'apiKey', 'catcher', 'jobChoice']);
   if (!cfg.catcher || !cfg.appUrl || !cfg.apiKey) return;
+  if (capturedIds.has(delta.id)) return;
   const [item] = await chrome.downloads.search({ id: delta.id });
   if (!item) return;
   const name = (item.filename || '').split(/[\\/]/).pop();
@@ -87,8 +88,35 @@ async function sendLinkedInResume(m) {
   return { ok: true, candidate_id: data.candidate_id, merged: data.status === 'merged', match: data.match, job: data.job };
 }
 
+// "Send to AvaStars" on a LinkedIn chat file: catch the download LinkedIn starts, send that file instead of saving it.
+let capture = null; // { m, reply, timer }
+const capturedIds = new Set();
+chrome.downloads.onCreated.addListener(async (item) => {
+  if (!capture) return;
+  const url = item.finalUrl || item.url || '';
+  const from = `${item.referrer || ''} ${url}`;
+  if (!/linkedin\.com|licdn\.com|^blob:https:\/\/www\.linkedin\.com/.test(from)) return;
+  const { m, reply, timer } = capture; capture = null; clearTimeout(timer);
+  capturedIds.add(item.id);
+  chrome.downloads.cancel(item.id).then(() => chrome.downloads.erase({ id: item.id })).catch(() => {});
+  if (url.startsWith('blob:')) { reply({ ok: false, blob: url }); return; } // the page reads it and sends it back
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) throw new Error(`LinkedIn didn't give the file (HTTP ${res.status}). Download it and upload it in AvaStars → Resumes.`);
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > 8 * 1024 * 1024) throw new Error('The file is over 8 MB');
+    reply(await sendLinkedInResume({ ...m, b64: toBase64(buf), mime: res.headers.get('content-type') || '' }));
+  } catch (e) { reply({ ok: false, error: e.message }); }
+});
+
 chrome.runtime.onMessage.addListener((m, sender, reply) => {
-  if (m?.type !== 'avs-linkedin-resume') return false;
+  if (!['avs-linkedin-resume', 'avs-linkedin-capture'].includes(m?.type)) return false;
+  if (m.type === 'avs-linkedin-capture') {
+    if (!/^https:\/\/([a-z0-9-]+\.)*linkedin\.com\//.test(sender?.url || '')) { reply({ ok: false, error: 'Not allowed from this page' }); return false; }
+    if (capture) { clearTimeout(capture.timer); capture.reply({ ok: false, error: 'Another file was being sent. Click again.' }); }
+    capture = { m, reply, timer: setTimeout(() => { if (capture?.reply === reply) { capture = null; reply({ ok: false, error: 'LinkedIn did not start the download. Wait for the chat to finish loading and click again.' }); } }, 20000) };
+    return true;
+  }
   if (!/^https:\/\/([a-z0-9-]+\.)*linkedin\.com\//.test(sender?.url || '')) { reply({ ok: false, error: 'Not allowed from this page' }); return false; }
   sendLinkedInResume(m).then(reply).catch((e) => reply({ ok: false, error: e.message }));
   return true; // reply comes later
