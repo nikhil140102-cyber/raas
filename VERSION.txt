@@ -1,3 +1,7 @@
+AvaStars Hire v6.7.2 (patch 42)
+- Fix: picking a job and leaving Title / Skills / Location empty didn't search at all. Empty boxes now use the job's title, top skills and city (and the boxes show them)
+- "Only open to work" tick box is read correctly; up to 8 search credits per search to reach 20 people; clearer message if the search service can't be reached
+
 AvaStars Hire v6.7.1 (patch 41)
 - Find people: if the strict search (open to work + title + all skills + city) finds too few, it widens step by step (fewer skills → without "open to work" → without the exact title), up to 6 searches; best skill matches first
 - "How we searched" under the table shows each search and how many results Google gave

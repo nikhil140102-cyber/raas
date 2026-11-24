@@ -19,10 +19,13 @@ export default async function SourcingPage({ searchParams }) {
   const jobs = await q(`SELECT j.id, j.title, j.location, j.mandatory_skills, c.name AS client FROM jobs j LEFT JOIN clients c ON c.id = j.client_id WHERE j.status IN ('open','paused') ORDER BY j.created_at DESC`);
   const job = jobs.find((j) => String(j.id) === String(sp.job || ''));
   // Fill the search from the chosen job unless the user typed their own.
-  const skillsText = sp.skills ?? (job ? (job.mandatory_skills || []).slice(0, 4).join(', ') : '');
-  const title = sp.title ?? (job ? job.title : '');
-  const location = sp.location ?? (job ? String(job.location || '').replace(/\(.*?\)/g, '').trim() : '');
-  const openToWork = sp.otw !== '0';
+  // Empty boxes (the form always sends them) mean "use the chosen job's title, top skills and city".
+  const one = (v) => String(Array.isArray(v) ? v[v.length - 1] : (v ?? '')).trim();
+  const skillsText = one(sp.skills) || (job ? (job.mandatory_skills || []).slice(0, 4).join(', ') : '');
+  const title = one(sp.title) || (job ? job.title : '');
+  const location = one(sp.location) || (job ? String(job.location || '').replace(/\(.*?\)/g, '').split(',')[0].trim() : '');
+  // The checkbox sends otw=0 (hidden) and otw=1 (ticked); "1" anywhere means ticked. No otw at all = first visit = ticked.
+  const openToWork = sp.otw === undefined ? true : [].concat(sp.otw).includes('1');
   const searched = Boolean(skillsText || title);
   const links = searched ? sourcingLinks({ skills: skillsText.split(','), title, location, openToWork }) : [];
   // New people: Google results for public LinkedIn profiles (Serper.dev). Cached for a day so repeat searches cost nothing.
@@ -40,7 +43,7 @@ export default async function SourcingPage({ searchParams }) {
         await setSetting(key, { at: Date.now(), people: found, queries: tried });
         const used = (await getSetting('serper_used', 0)) + r.used;
         await setSetting('serper_used', used);
-      } catch (e) { foundError = e.message; }
+      } catch (e) { foundError = /fetch failed|ECONN|ETIMEDOUT|network/i.test(e.message) ? 'Couldn\'t reach the search service just now. Click Find people again in a minute.' : e.message; }
     }
   }
   const known = found?.length ? Object.fromEntries((await q('SELECT id, profile_url, connect_sent_at FROM candidates WHERE profile_url = ANY($1::text[])', [found.map((p) => p.profile_url)])).map((r) => [r.profile_url, r])) : {};
