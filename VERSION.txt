@@ -1,3 +1,8 @@
+AvaStars Hire v6.7 (patch 40) - Sourcing finds new people
+- Sourcing → "Find people": lists up to 20 NEW matching people (public LinkedIn profiles found through Google search via Serper.dev) with headline, location, open-to-work, skill match and "In AvaStars" tag; each row has Save and "Connect on LinkedIn" (opens the profile, records the request in the connection log)
+- Results are kept for a day, so repeating a search uses no credits; credits used are shown
+- New key: Settings → Keys & connections → Sourcing → Serper.dev API key (2,500 free searches, no card)
+
 AvaStars Hire v6.6.3 (patch 39) - Extension 1.7.3: LinkedIn job form filling
 - "Post on LinkedIn" opens LinkedIn's free job-post page (the old link went to the Recruiter login)
 - "Fill this page" now handles LinkedIn's form: job title on the start page (picks the suggestion), then on the draft opens "Edit job details" and fills Job title, Company (only if LinkedIn has that exact company page), Workplace type (On-site / Hybrid / Remote), Job location (picks the city, e.g. "Pune City, Maharashtra, India"), Job type and the description; on Job settings fills the apply link when "On an external website" is chosen

@@ -1,10 +1,13 @@
 import Link from 'next/link';
-import { q } from '@/lib/db';
+import { createHash } from 'crypto';
+import { q, getSetting, setSetting } from '@/lib/db';
+import { cfg } from '@/lib/config';
 import { requirePagePerm } from '@/lib/auth';
 import { Header, Flash, Score, Pill } from '@/components/ui';
 import { AutoSelect } from '@/components/client';
 import { fmtDate } from '@/lib/util';
-import { SOURCING_STATUSES, sourcingLinks, WEEKLY_INVITE_LIMIT } from '@/lib/sourcing';
+import { SOURCING_STATUSES, sourcingLinks, WEEKLY_INVITE_LIMIT, findPeople } from '@/lib/sourcing';
+import FoundActions from '@/components/FoundActions';
 import ConnectButton from '@/components/ConnectButton';
 import { setSourcingStatus, addProspectToJob, scoreProspects } from '../../_actions/sourcing';
 
@@ -22,6 +25,27 @@ export default async function SourcingPage({ searchParams }) {
   const openToWork = sp.otw !== '0';
   const searched = Boolean(skillsText || title);
   const links = searched ? sourcingLinks({ skills: skillsText.split(','), title, location, openToWork }) : [];
+  // New people: Google results for public LinkedIn profiles (Serper.dev). Cached for a day so repeat searches cost nothing.
+  const serperKey = cfg('SERPER_API_KEY');
+  let found = null; let foundError = ''; let fromCache = false;
+  if (searched && serperKey && sp.find !== '0') {
+    const args = { skills: skillsText.split(','), title, location, openToWork, want: 20 };
+    const key = `serp:${createHash('sha1').update(JSON.stringify(args).toLowerCase()).digest('hex')}`;
+    const cached = await getSetting(key, null);
+    if (cached && cached.at > Date.now() - 24 * 3600 * 1000 && sp.fresh !== '1') { found = cached.people; fromCache = true; }
+    else {
+      try {
+        const r = await findPeople({ apiKey: serperKey, ...args });
+        found = r.people;
+        await setSetting(key, { at: Date.now(), people: found });
+        const used = (await getSetting('serper_used', 0)) + r.used;
+        await setSetting('serper_used', used);
+      } catch (e) { foundError = e.message; }
+    }
+  }
+  const known = found?.length ? Object.fromEntries((await q('SELECT id, profile_url, connect_sent_at FROM candidates WHERE profile_url = ANY($1::text[])', [found.map((p) => p.profile_url)])).map((r) => [r.profile_url, r])) : {};
+  const serperUsed = serperKey ? await getSetting('serper_used', 0) : 0;
+  const qs = new URLSearchParams({ ...(sp.job ? { job: sp.job } : {}), title, skills: skillsText, location, otw: openToWork ? '1' : '0' }).toString();
   const status = SOURCING_STATUSES.some(([v]) => v === sp.status) ? sp.status : '';
   const prospects = await q(
     `SELECT c.id, c.name, c.current_title, c.current_company, c.location, c.profile_url, c.sourcing_status, c.open_to_work, c.created_at, c.sourced_job_id,
@@ -68,14 +92,55 @@ export default async function SourcingPage({ searchParams }) {
                 <label className="field">Location<input name="location" defaultValue={location} placeholder="e.g. Pune" /></label>
               </div>
               <label className="row small" style={{ gap: 6 }}><input type="hidden" name="otw" value="0" /><input type="checkbox" name="otw" value="1" defaultChecked={openToWork} /> Only people who say they are open to work</label>
-              <div><button className="btn primary" type="submit">Build searches</button></div>
+              <div><button className="btn primary" type="submit">{serperKey ? 'Find people' : 'Build searches'}</button></div>
               <p className="tiny muted">Pick a job and leave the boxes empty to use its title, top skills and city.</p>
             </form>
           </section>
 
+          {searched ? (
+            <section className="card" id="found">
+              <div className="row" style={{ justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                <h2 style={{ margin: 0 }}>2. New people{found ? ` (${found.length})` : ''}</h2>
+                {found ? <span className="tiny muted">{fromCache ? 'From today\'s saved results · ' : ''}<a href={`/sourcing?${qs}&fresh=1#found`}>Search again</a> · {serperUsed} search credit(s) used</span> : null}
+              </div>
+              {!serperKey ? (
+                <div className="notice info stack" style={{ gap: 6 }}>
+                  <strong>Turn on &quot;find new people&quot; (free)</strong>
+                  <span className="small">The app can list 20 matching LinkedIn profiles here from Google&apos;s results. It needs a free <strong>Serper.dev</strong> key (2,500 free searches, no card): sign up at serper.dev, copy the API key, then {/* admin */}paste it in <Link href="/settings/keys">Settings → Keys &amp; connections → Sourcing</Link>.</span>
+                </div>
+              ) : foundError ? <div className="notice warn" role="alert">{foundError}</div> : found && found.length ? (
+                <div className="tablewrap">
+                  <table>
+                    <thead><tr><th>#</th><th>Person</th><th>Location</th><th>Skill match</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
+                    <tbody>
+                      {found.map((p, i) => (
+                        <tr key={p.profile_url}>
+                          <td className="small muted">{i + 1}</td>
+                          <td>
+                            <a href={p.profile_url} target="_blank" rel="noreferrer" className="strong">{p.name}</a>
+                            {p.open_to_work ? <> <Pill tone="green">Open to work</Pill></> : null}
+                            {known[p.profile_url] ? <> <Pill tone="blue">In AvaStars</Pill></> : null}
+                            <div className="tiny muted">{p.headline || '—'}</div>
+                          </td>
+                          <td className="small">{p.location || '—'}</td>
+                          <td>{typeof p.match === 'number' ? <Score value={p.match} /> : <span className="tiny muted">—</span>}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <FoundActions person={p} jobId={job?.id || null} savedId={known[p.profile_url]?.id || null}
+                              sentAt={known[p.profile_url]?.connect_sent_at ? new Date(known[p.profile_url].connect_sent_at).toISOString() : null} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="small muted">No public LinkedIn profiles matched. Try fewer skills, untick &quot;open to work&quot;, or a nearby city.</p>}
+              <p className="tiny muted" style={{ margin: 0 }}>Found through Google&apos;s public search results, not by reading LinkedIn. &quot;Connect on LinkedIn&quot; opens the profile and records the request: click LinkedIn&apos;s own Connect there. Skill match = how many of your skills Google&apos;s snippet mentions; save the person to get a full match %.</p>
+            </section>
+          ) : null}
+
           {links.length ? (
             <section className="card">
-              <h2>2. Open a search and save the right people</h2>
+              <h2>3. More searches on LinkedIn and Google</h2>
               <div className="stack" style={{ gap: 10 }}>
                 {links.map((l) => (
                   <div key={l.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 12, borderBottom: '1px solid var(--border)', paddingBottom: 10 }}>
@@ -91,7 +156,7 @@ export default async function SourcingPage({ searchParams }) {
           {job ? (
             <section className="card" id="top">
               <div className="row" style={{ justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <h2 style={{ margin: 0 }}>3. Top {top.length || 20} for {job.title}</h2>
+                <h2 style={{ margin: 0 }}>4. Saved people: top {top.length || 20} for {job.title}</h2>
                 {unscored ? (
                   <form action={scoreProspects}><input type="hidden" name="job_id" value={job.id} /><button className="btn sm" type="submit">Score {unscored} more saved prospect(s) for this job</button></form>
                 ) : null}

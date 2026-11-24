@@ -6,6 +6,7 @@ import { requirePerm } from '@/lib/auth';
 import { addToJob, saveScore } from '@/lib/ingest';
 import { scoreMatch } from '@/lib/ai';
 import { SOURCING_STATUSES } from '@/lib/sourcing';
+import { upsertProspect } from '@/lib/prospects';
 
 
 export async function setSourcingStatus(formData) {
@@ -59,4 +60,12 @@ export async function scoreProspects(formData) {
   }
   revalidatePath('/sourcing');
   redirect(`/sourcing?job=${jobId}&msg=${encodeURIComponent(`${rows.length} prospect(s) scored for ${job.title}.`)}#top`);
+}
+
+/** A person from the Google results on the Sourcing page: Save (and optionally record a Connect). */
+export async function saveFoundPerson(person, jobId, connect) {
+  const me = await requirePerm('candidates.edit');
+  const r = await upsertProspect(person || {}, { user: me, jobId: Number(jobId) || null, connectSent: Boolean(connect) });
+  revalidatePath('/sourcing');
+  return { id: r.id, match: r.match };
 }
