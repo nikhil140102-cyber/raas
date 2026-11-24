@@ -68,6 +68,32 @@
 
     </section>
 
+    <section class="card" id="postCard">
+      <div class="row between"><h2>Post a job</h2><span class="pill gray" id="dueBadge"></span></div>
+      <div id="dueWrap" hidden>
+        <div class="tiny strong">Scheduled posts for you</div>
+        <div id="dueList" class="list"></div>
+      </div>
+      <label class="field">AvaStars job
+        <select id="postJob"></select>
+      </label>
+      <div class="row">
+        <button type="button" class="btn primary" id="postIndeed" style="flex:1">Post on Indeed</button>
+        <button type="button" class="btn primary" id="postLinkedIn" style="flex:1">Post on LinkedIn</button>
+      </div>
+      <div id="postMsg" class="tiny" role="status" aria-live="polite"></div>
+      <div id="kitWrap" class="stack" hidden>
+        <div class="row between"><span class="strong tiny" id="kitTitle"></span><button type="button" class="btn ghost sm" id="kitClose">Close</button></div>
+        <button type="button" class="btn" id="fillNow">Fill this page</button>
+        <div id="kitFields" class="list"></div>
+        <label class="field">Live job link (after you publish)
+          <input type="url" id="liveUrl" placeholder="Paste the live job link after publishing" />
+        </label>
+        <button type="button" class="btn primary" id="published">I've published it</button>
+        <p class="tiny muted">The extension fills the form but never publishes. Check it, pick the drop-downs, then click the portal's own Post / Publish button.</p>
+      </div>
+    </section>
+
     <section class="card" id="indeedCard">
       <div class="row between">
         <h2>Collect from Indeed</h2>
@@ -100,6 +126,7 @@
     <section class="card">
       <h2>LinkedIn messages</h2>
       <p class="tiny muted">When someone sends you a resume (PDF or Word) in LinkedIn chat, a purple <strong>Send to AvaStars</strong> button appears under the file. One click adds the person and their resume, into the job chosen in "Add them to" above (or the resume database if that's set to Matching job). Sent files show <strong>Sent ✓</strong>. If the button doesn't appear, reload the LinkedIn page once.</p>
+      <p class="tiny muted"><strong>Sourcing:</strong> on any LinkedIn profile a <strong>Save to AvaStars</strong> button appears at the bottom right. It saves the person as a prospect (Sourcing page in AvaStars), scored against the job in "Add them to".</p>
     </section>
 
     <section class="card">
@@ -139,5 +166,6 @@
   <script src="dash.js"></script>
   <script src="panel.js"></script>
   <script src="collect.js"></script>
+  <script src="post.js"></script>
 </body>
 </html>

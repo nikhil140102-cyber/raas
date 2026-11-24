@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AvaStars Collector",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Send job applicants from Indeed, LinkedIn messages and other portals to AvaStars Hire.",
   "action": {
     "default_title": "AvaStars Collector",
@@ -27,7 +27,9 @@
     "sidePanel",
     "storage",
     "scripting",
-    "downloads"
+    "downloads",
+    "alarms",
+    "notifications"
   ],
   "host_permissions": [
     "https://*.indeed.com/*",

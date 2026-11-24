@@ -6,3 +6,4 @@
 .avs-send-btn.done { background: #ECFDF3; color: #067647 !important; cursor: default; }
 .avs-send-btn.done::before { background: #067647; color: #fff; }
 .avs-send-btn.bad { background: #FEF3F2; color: #B42318 !important; }
+.avs-send-btn.avs-save-profile { position: fixed; right: 24px; bottom: 96px; z-index: 2147483000; height: 40px; border-radius: 20px; padding: 0 16px; font-size: 14px; line-height: 40px; box-shadow: 0 6px 20px rgba(16,24,40,.25); margin: 0; }

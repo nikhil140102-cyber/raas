@@ -44,6 +44,7 @@ async function connect() {
     $('conn').className = 'tiny ok';
     await fillJobs();
     if (typeof renderIndeedJobs === 'function' && collector.jobs.length) renderIndeedJobs();
+    if (typeof fillJobs2 === 'function') { fillJobs2(); loadSchedules(); }
     return true;
   } catch (e) {
     $('conn').textContent = `Not connected: ${e.message}`; $('conn').className = 'tiny bad';

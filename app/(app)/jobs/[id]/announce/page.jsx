@@ -11,6 +11,7 @@ import { markPosted } from '../../../../_actions/jobs';
 import PortalKit from './PortalKit';
 import { postToLinkedIn, disconnectLinkedIn } from '../../../../_actions/social';
 import PostCard from './PostCard';
+import { createSchedule, updateSchedule } from '../../../../_actions/schedules';
 
 export const metadata = { title: 'Announce hiring — AvaStars Hire' };
 
@@ -30,6 +31,11 @@ export default async function AnnouncePage({ params, searchParams }) {
   const history = await q('SELECT s.*, u.name AS who FROM social_posts s LEFT JOIN users u ON u.id = s.posted_by WHERE s.job_id = $1 ORDER BY s.created_at DESC LIMIT 30', [job.id]);
   const local = /localhost|127\.0\.0\.1/.test(appUrl());
   const back = `/jobs/${job.id}/announce`;
+  const team = await q(`SELECT id, name, role FROM users WHERE active AND role IN ('admin','hr','intern') ORDER BY name`);
+  const schedules = await q(`SELECT s.*, u.name AS assignee, d.name AS done_name FROM post_schedules s LEFT JOIN users u ON u.id = s.assigned_to LEFT JOIN users d ON d.id = s.done_by
+    WHERE s.job_id = $1 ORDER BY (s.status = 'pending') DESC, s.scheduled_at DESC LIMIT 20`, [job.id]);
+  const istNow = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 16);
+  const ist = (d) => new Date(d).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 
   return (
     <>
@@ -90,6 +96,45 @@ export default async function AnnouncePage({ params, searchParams }) {
             <div className="row" style={{ gap: 8 }}><CopyButton text={link} label="Copy link" /><a className="btn sm" href={link} target="_blank" rel="noreferrer">Open</a></div>
             <p className="tiny muted">Anyone can open it and apply. No login needed. The link preview shows the job title, location and salary.</p>
             <CopyButton text={appUrl('/careers')} label="Copy link to all open jobs" />
+          </section>
+
+          <section id="schedule" className="card">
+            <h2>Schedule posting on Indeed / LinkedIn</h2>
+            <p className="tiny muted">At the chosen time the person you pick gets a reminder on their dashboard and in the AvaStars Chrome extension. The extension fills the portal&apos;s form; they check it and click Publish.</p>
+            <form action={createSchedule} className="stack" style={{ gap: 8 }}>
+              <input type="hidden" name="job_id" value={job.id} />
+              <div className="row" style={{ gap: 14 }}>
+                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="indeed" defaultChecked /> Indeed</label>
+                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="linkedin" defaultChecked /> LinkedIn</label>
+              </div>
+              <label className="field">When (India time)<input type="datetime-local" name="when" min={istNow} defaultValue={istNow} required /></label>
+              <label className="field">Who publishes it
+                <select name="assigned_to" defaultValue={user.id}>
+                  {team.map((t) => <option key={t.id} value={t.id}>{t.name} ({t.role === 'hr' ? 'HR' : t.role === 'admin' ? 'Admin' : 'Intern'})</option>)}
+                  <option value="">Anyone in the team</option>
+                </select>
+              </label>
+              <label className="field">Note (optional)<input name="note" maxLength={300} placeholder="e.g. Post as sponsored, ₹500 budget" /></label>
+              <button className="btn primary sm" type="submit">Schedule</button>
+            </form>
+            {schedules.length ? (
+              <div className="stack" style={{ gap: 6 }}>
+                {schedules.map((s) => (
+                  <div key={s.id} className="row small" style={{ justifyContent: 'space-between', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 6 }}>
+                    <span>
+                      <strong>{s.portal === 'indeed' ? 'Indeed' : 'LinkedIn'}</strong> · {ist(s.scheduled_at)} · {s.assignee || 'anyone'}
+                      {s.note ? <span className="tiny muted"> · {s.note}</span> : null}
+                    </span>
+                    {s.status === 'pending' ? (
+                      <span className="row" style={{ gap: 4 }}>
+                        <Pill tone={new Date(s.scheduled_at) <= new Date() ? 'amber' : 'blue'}>{new Date(s.scheduled_at) <= new Date() ? 'Due' : 'Scheduled'}</Pill>
+                        <form action={updateSchedule}><input type="hidden" name="id" value={s.id} /><button className="linkbtn tiny" name="action" value="delete" type="submit">Remove</button></form>
+                      </span>
+                    ) : <Pill tone={s.status === 'done' ? 'green' : 'gray'}>{s.status === 'done' ? `Published${s.done_name ? ` by ${s.done_name}` : ''}` : 'Skipped'}</Pill>}
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </section>
 
           <section className="card">

@@ -96,8 +96,72 @@
     }
   }
 
+  // ---------------------------------------------------------------- profiles: "Save to AvaStars" (sourcing)
+  const PBTN = 'avs-save-profile';
+  const slugOf = () => (location.pathname.match(/^\/in\/([^/]+)\/?$/) || [])[1] || null;
+
+  /** Reads what the profile page shows (top card, about, experience, skills). */
+  function readProfile() {
+    const main = document.querySelector('main') || document.body;
+    const h1 = main.querySelector('h1');
+    const top = h1?.closest('section') || h1?.parentElement?.parentElement?.parentElement || main;
+    const txt = (sel, root = top) => clean(root.querySelector(sel)?.textContent);
+    const sectionText = (id, max) => {
+      const sec = document.getElementById(id)?.closest('section');
+      if (!sec) return '';
+      return [...sec.querySelectorAll('span[aria-hidden="true"]')].map((x) => clean(x.textContent)).filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join('\n').slice(0, max);
+    };
+    const topText = clean(top.innerText);
+    const company = clean(top.querySelector('[aria-label^="Current company"]')?.getAttribute('aria-label')?.replace(/^Current company:\s*/i, '').replace(/\.\s*Click.*$/i, ''));
+    const skillsSec = document.getElementById('skills')?.closest('section');
+    const skills = skillsSec ? [...skillsSec.querySelectorAll('a[data-field="skill_card_skill_topic"] span[aria-hidden="true"], .hoverable-link-text span[aria-hidden="true"]')].map((x) => clean(x.textContent)).filter((x) => x && x.length < 60) : [];
+    return {
+      name: clean(h1?.textContent),
+      headline: txt('.text-body-medium.break-words') || txt('.text-body-medium'),
+      location: txt('.text-body-small.inline.t-black--light.break-words') || txt('span.text-body-small.inline'),
+      company,
+      open_to_work: /open to work|#opentowork/i.test(topText) || !!top.querySelector('img[alt*="OPEN_TO_WORK" i], img[alt*="open to work" i]'),
+      about: sectionText('about', 2500),
+      experience: sectionText('experience', 3000).split('\n').slice(0, 30),
+      skills: [...new Set(skills)].slice(0, 40),
+      profile_url: `https://www.linkedin.com/in/${slugOf()}/`,
+    };
+  }
+
+  async function profileButton() {
+    const slug = slugOf();
+    const old = document.querySelector(`.${PBTN}`);
+    if (!slug || !document.querySelector('main h1')) { old?.remove(); return; }
+    if (old && old.dataset.slug === slug) return;
+    old?.remove();
+    const { savedProfiles = {} } = await chrome.storage.local.get('savedProfiles');
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = `${BTN} ${PBTN}`; btn.dataset.slug = slug;
+    btn.setAttribute('aria-label', 'Save this profile to AvaStars Hire as a prospect');
+    const saved = savedProfiles[slug];
+    if (saved) { btn.className += ' done'; btn.textContent = `Saved in AvaStars ✓${typeof saved.match === 'number' ? ` · ${saved.match}%` : ''}`; btn.title = 'Click to update it'; }
+    else btn.textContent = 'Save to AvaStars';
+    btn.addEventListener('click', async () => {
+      btn.disabled = true; btn.className = `${BTN} ${PBTN} busy`; btn.textContent = 'Saving…';
+      try {
+        const p = readProfile();
+        if (!p.name) throw new Error('Wait for the profile to load, then try again.');
+        const res = await chrome.runtime.sendMessage({ type: 'avs-linkedin-prospect', profile: p });
+        if (!res?.ok) throw new Error(res?.error || 'Could not save');
+        const store = (await chrome.storage.local.get('savedProfiles')).savedProfiles || {};
+        store[slug] = { at: Date.now(), id: res.candidate_id, match: res.match ?? null };
+        await chrome.storage.local.set({ savedProfiles: Object.fromEntries(Object.entries(store).slice(-3000)) });
+        btn.className = `${BTN} ${PBTN} done`;
+        btn.textContent = `Saved in AvaStars ✓${typeof res.match === 'number' ? ` · ${res.match}%` : ''}`;
+        btn.title = res.job ? `Prospect for ${res.job}` : 'Saved as a prospect (Sourcing page)';
+      } catch (e) { btn.className = `${BTN} ${PBTN} bad`; btn.textContent = 'Failed · retry'; btn.title = e.message; }
+      btn.disabled = false;
+    });
+    document.body.appendChild(btn);
+  }
+
   let timer = null;
-  const schedule = () => { clearTimeout(timer); timer = setTimeout(() => decorate().catch(() => {}), 500); };
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(() => { decorate().catch(() => {}); profileButton().catch(() => {}); }, 500); };
   new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
   schedule();
 })();

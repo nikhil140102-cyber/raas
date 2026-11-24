@@ -121,3 +121,57 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
   sendLinkedInResume(m).then(reply).catch((e) => reply({ ok: false, error: e.message }));
   return true; // reply comes later
 });
+
+// Scheduled job posts: every 10 minutes check what's due for this person; show a count on the
+// toolbar icon and a Chrome notification for each newly due post.
+async function checkDuePosts() {
+  const cfg = await chrome.storage.local.get(['appUrl', 'apiKey', 'notifiedPosts']);
+  if (!cfg.appUrl || !cfg.apiKey) return;
+  try {
+    const r = await fetch(`${cfg.appUrl.replace(/\/+$/, '')}/api/inbound/schedules`, { headers: { Authorization: `Bearer ${cfg.apiKey}` } });
+    if (!r.ok) return;
+    const { items = [] } = await r.json();
+    const due = items.filter((x) => x.due);
+    await chrome.action.setBadgeText({ text: due.length ? String(due.length) : '' });
+    await chrome.action.setBadgeBackgroundColor({ color: '#B54708' });
+    const seen = new Set(cfg.notifiedPosts || []);
+    for (const s of due) {
+      if (seen.has(s.id)) continue;
+      seen.add(s.id);
+      chrome.notifications.create(`avs-post-${s.id}`, {
+        type: 'basic', iconUrl: 'icons/icon128.png', priority: 2,
+        title: `Time to post: ${s.title}`,
+        message: `Publish it on ${s.portal === 'indeed' ? 'Indeed' : 'LinkedIn'}. Click the AvaStars icon → Post a job → Start.${s.note ? ` Note: ${s.note}` : ''}`,
+      });
+    }
+    await chrome.storage.local.set({ notifiedPosts: [...seen].slice(-300) });
+  } catch { /* offline: try again next time */ }
+}
+chrome.alarms.create('avs-due-posts', { periodInMinutes: 10, delayInMinutes: 1 });
+chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'avs-due-posts') checkDuePosts(); });
+chrome.notifications.onClicked.addListener(async (id) => {
+  if (!id.startsWith('avs-post-')) return;
+  const win = await chrome.windows.getLastFocused().catch(() => null);
+  try { await chrome.sidePanel.open({ windowId: win?.id }); } catch {
+    const { appUrl } = await chrome.storage.local.get('appUrl');
+    if (appUrl) chrome.tabs.create({ url: `${appUrl.replace(/\/+$/, '')}/` });
+  }
+  chrome.notifications.clear(id);
+});
+
+// Sourcing: "Save to AvaStars" on a LinkedIn profile.
+chrome.runtime.onMessage.addListener((m, sender, reply) => {
+  if (m?.type !== 'avs-linkedin-prospect') return false;
+  if (!/^https:\/\/([a-z0-9-]+\.)*linkedin\.com\/in\//.test(sender?.url || '')) { reply({ ok: false, error: 'Open a LinkedIn profile first' }); return false; }
+  (async () => {
+    const cfg = await chrome.storage.local.get(['appUrl', 'apiKey', 'jobChoice']);
+    if (!cfg.appUrl || !cfg.apiKey) throw new Error('Not connected. In AvaStars open "Chrome extension" and click Connect.');
+    const body = { ...m.profile };
+    if (cfg.jobChoice && /^\d+$/.test(cfg.jobChoice)) body.job_id = cfg.jobChoice;
+    const r = await fetch(`${cfg.appUrl.replace(/\/+$/, '')}/api/inbound/prospect`, { method: 'POST', headers: { Authorization: `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) throw new Error(data.error || `AvaStars returned ${r.status}`);
+    return data;
+  })().then(reply).catch((e) => reply({ ok: false, error: e.message }));
+  return true;
+});

@@ -50,6 +50,8 @@ export default async function Dashboard({ searchParams }) {
     noAnswer.n > 0 && { tone: '#98A2B3', title: `${noAnswer.n} call(s) not answered`, body: 'They will be retried automatically.', href: '/screening' },
   ].filter(Boolean);
 
+  const duePosts = can(me, 'jobs.post') ? await q(`SELECT s.id, s.job_id, s.portal, s.scheduled_at, s.note, j.title FROM post_schedules s JOIN jobs j ON j.id = s.job_id
+    WHERE s.status = 'pending' AND s.scheduled_at <= now() + interval '2 hours' AND (s.assigned_to IS NULL OR s.assigned_to = $1) ORDER BY s.scheduled_at LIMIT 10`, [me.id]) : [];
   return (
     <>
       <section className="hero">
@@ -65,6 +67,18 @@ export default async function Dashboard({ searchParams }) {
       </section>
 
       <Flash msg={sp.msg} />
+      {duePosts.length ? (
+        <div className="notice warn stack" style={{ gap: 6 }} role="status">
+          <strong>Job posts to publish ({duePosts.length})</strong>
+          {duePosts.map((d) => (
+            <div key={d.id} className="row small" style={{ justifyContent: 'space-between', gap: 10 }}>
+              <span>{d.title} on <strong>{d.portal === 'indeed' ? 'Indeed' : 'LinkedIn'}</strong> · {new Date(d.scheduled_at) <= new Date() ? 'due now' : `at ${new Date(d.scheduled_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}`}{d.note ? ` · ${d.note}` : ''}</span>
+              <Link className="btn sm" href={`/jobs/${d.job_id}/announce#schedule`}>Open</Link>
+            </div>
+          ))}
+          <span className="tiny">Open the AvaStars extension → <strong>Post a job</strong> → it fills the form, you click Publish.</span>
+        </div>
+      ) : null}
       {!me.ext_connected_at && can(me, 'candidates.edit') ? (
         <div className="notice info row" style={{ justifyContent: 'space-between', gap: 12 }}>
           <span><strong>New here?</strong> Set up the AvaStars Chrome extension to collect Indeed applicants in one click. It takes about 2 minutes.</span>

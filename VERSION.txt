@@ -1,3 +1,8 @@
+AvaStars Hire v6.5 (patch 35) - Post, schedule and source
+- Extension 1.6 "Post a job": pick an AvaStars job → Post on Indeed / Post on LinkedIn opens the portal and fills the form (title, company, location, description, apply link…); every field also has a Copy button. The person checks it and clicks the portal's own Publish, then "I've published it" saves the live link
+- Scheduled posting (Job → Post & announce → Schedule): pick Indeed/LinkedIn, date-time and who publishes; at that time they get a dashboard reminder, a Chrome notification and a count on the extension icon, with a Start button
+- Sourcing page: build LinkedIn / #OpenToWork / Google searches from skills or a job; "Save to AvaStars" button on every LinkedIn profile saves the person as a prospect with match %; prospects list with outreach status and "Add to pipeline"
+
 AvaStars Hire v6.4.1 (patch 34) - Extension 1.5.1
 - Fix: the LinkedIn chat "Send to AvaStars" button didn't appear, because LinkedIn shows files as a download button with no link. The button now appears under every PDF/Word resume; clicking it catches LinkedIn's own download and sends the file to AvaStars instead of saving it (photos and other files are skipped)
 

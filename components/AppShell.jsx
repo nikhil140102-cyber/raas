@@ -13,6 +13,7 @@ const NAV = [
   ['/jobs', 'Jobs & posting', 'briefcase'],
   ['/resumes', 'Resumes', 'file'],
   ['/pipeline', 'Pipeline', 'kanban'],
+  ['/sourcing', 'Sourcing', 'search'],
   ['/screening', 'AI screening', 'phone'],
   ['/interviews', 'Interviews', 'calendar'],
   ['/extension', 'Chrome extension', 'puzzle'],
