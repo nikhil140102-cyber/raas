@@ -263,7 +263,9 @@ async function renderCatcher() {
 async function init() {
   for (const s of SOURCES) $('source').append(el('option', { text: s }));
   const saved = await chrome.storage.local.get(['appUrl', 'apiKey', 'catcher', 'range', 'undated']);
-  state.appUrl = saved.appUrl || ''; state.apiKey = saved.apiKey || '';
+  const d = self.AVS_DEFAULTS || {};
+  state.appUrl = saved.appUrl || d.appUrl || ''; state.apiKey = saved.apiKey || d.apiKey || '';
+  if ((!saved.appUrl && state.appUrl) || (!saved.apiKey && state.apiKey)) await chrome.storage.local.set({ appUrl: state.appUrl, apiKey: state.apiKey });
   $('appUrl').value = state.appUrl; $('apiKey').value = state.apiKey ? '••••••••' : '';
   $('catcher').checked = Boolean(saved.catcher);
   $('undated').checked = Boolean(saved.undated);

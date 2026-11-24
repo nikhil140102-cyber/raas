@@ -1,3 +1,6 @@
+AvaStars Hire v6.6.1 (patch 37) - Extension 1.7.1
+- The extension starts with the app address (https://raas-drab.vercel.app) filled in. A private test copy can also carry the Inbound API key (kept out of GitHub, as the repository is public)
+
 AvaStars Hire v6.6 (patch 36) - Sourcing: top 20 + connection requests
 - Sourcing → pick a job → "Top 20" saved prospects ranked by match % with a "Connect on LinkedIn" button (opens the profile; marks the request sent, with Undo); "Score N more prospects for this job"
 - Connection requests are counted: today / last 7 days (vs LinkedIn's ~100 a week) / all time, accepted, and a full log (who, when, by whom, status)

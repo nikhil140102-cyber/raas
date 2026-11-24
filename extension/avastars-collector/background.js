@@ -1,8 +1,21 @@
+// Defaults (app address, and for a private test copy also the key) fill in a fresh install.
+try { importScripts('defaults.js'); } catch { /* no defaults file */ }
+async function seedDefaults() {
+  const d = self.AVS_DEFAULTS || {};
+  const cur = await chrome.storage.local.get(['appUrl', 'apiKey']);
+  const set = {};
+  if (!cur.appUrl && d.appUrl) set.appUrl = d.appUrl;
+  if (!cur.apiKey && d.apiKey) set.apiKey = d.apiKey;
+  if (Object.keys(set).length) await chrome.storage.local.set(set);
+}
+seedDefaults();
+
 // AvaStars Collector — background worker.
 // 1) Clicking the toolbar icon opens the side panel.
 // 2) Optional "resume catcher": when you download a CV from a job portal, it is sent to AvaStars Hire.
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+  seedDefaults();
 });
 chrome.runtime.onStartup?.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
