@@ -38,8 +38,14 @@ export async function POST(req) {
         `Sourced from LinkedIn${b.open_to_work ? ' (open to work)' : ''}; has not applied yet.`, jobId, typeof b.open_to_work === 'boolean' ? b.open_to_work : null],
     )).id;
   }
+  if (b.connect_sent === true) {
+    // Recorded when the recruiter clicked LinkedIn's own Connect button and it went through (shows "Pending").
+    await q(`UPDATE candidates SET connect_sent_at = COALESCE(connect_sent_at, now()), connect_sent_by = COALESCE(connect_sent_by, $2),
+        sourcing_status = CASE WHEN sourcing_status IN ('to_contact') OR sourcing_status IS NULL THEN 'request_sent' ELSE sourcing_status END WHERE id = $1`, [id, auth.user?.id ?? null]);
+    await logActivity(id, null, `LinkedIn connection request sent${auth.user ? ` by ${auth.user.name}` : ''}.`);
+  }
   let match = null; let jobTitle = null;
-  if (jobId) {
+  if (jobId && !(b.connect_sent === true && prev)) {
     const job = await one('SELECT * FROM jobs WHERE id = $1', [jobId]);
     if (job) {
       const cand = await one('SELECT * FROM candidates WHERE id = $1', [id]);

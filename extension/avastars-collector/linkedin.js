@@ -160,8 +160,88 @@
     document.body.appendChild(btn);
   }
 
+  // ---------------------------------------------------------------- search results: a small "Save" per person
+  const SBTN = 'avs-save-result';
+  const profileLink = (root) => [...root.querySelectorAll('a[href*="/in/"]')].find((a) => /\/in\/[^/?#]+/.test(a.href) && clean(a.textContent).length > 1);
+
+  /** Reads one search-result card: the name link, then the next text lines (headline, location). */
+  function readCard(root) {
+    const a = profileLink(root);
+    if (!a) return null;
+    const slug = (a.href.match(/\/in\/([^/?#]+)/) || [])[1];
+    const name = clean(a.querySelector('span[aria-hidden="true"]')?.textContent || a.textContent).replace(/View .*?profile/i, '').replace(/\s*•.*$/, '').trim();
+    const lines = root.innerText.split('\n').map(clean).filter((l) => l && !l.toLowerCase().startsWith(name.toLowerCase()) && !/view .*profile/i.test(l)
+      && !/^(connect|follow|message|pending|save|saved.*|•|1st|2nd|3rd\+?|\d+(st|nd|rd|th))$/i.test(l) && !/mutual connection|^• ?(1st|2nd|3rd)/i.test(l));
+    return { slug, name, headline: lines[0] || '', location: lines[1] || '', open_to_work: /open to work|#opentowork/i.test(root.innerText), profile_url: `https://www.linkedin.com/in/${slug}/` };
+  }
+
+  async function decorateResults() {
+    if (!/^\/search\/results\/(people|all)/.test(location.pathname)) return;
+    const main = document.querySelector('main') || document.body;
+    const cards = [...main.querySelectorAll('li')].filter((li) => profileLink(li) && !li.querySelector('li') && li.innerText.length < 1500);
+    if (!cards.length) return;
+    const { savedProfiles = {} } = await chrome.storage.local.get('savedProfiles');
+    for (const li of cards) {
+      if (li.querySelector(`.${SBTN}`)) continue;
+      const card = readCard(li);
+      if (!card?.slug || !card.name) continue;
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = `${BTN} ${SBTN}`;
+      btn.setAttribute('aria-label', `Save ${card.name} to AvaStars`);
+      const saved = savedProfiles[card.slug];
+      if (saved) { btn.className += ' done'; btn.textContent = `Saved ✓${typeof saved.match === 'number' ? ` · ${saved.match}%` : ''}`; }
+      else btn.textContent = 'Save';
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        btn.disabled = true; btn.className = `${BTN} ${SBTN} busy`; btn.textContent = 'Saving…';
+        try {
+          const res = await chrome.runtime.sendMessage({ type: 'avs-linkedin-prospect', profile: readCard(li) || card });
+          if (!res?.ok) throw new Error(res?.error || 'Could not save');
+          const store = (await chrome.storage.local.get('savedProfiles')).savedProfiles || {};
+          store[card.slug] = { at: Date.now(), id: res.candidate_id, match: res.match ?? null };
+          await chrome.storage.local.set({ savedProfiles: Object.fromEntries(Object.entries(store).slice(-3000)) });
+          btn.className = `${BTN} ${SBTN} done`; btn.textContent = `Saved ✓${typeof res.match === 'number' ? ` · ${res.match}%` : ''}`;
+        } catch (err) { btn.className = `${BTN} ${SBTN} bad`; btn.textContent = 'Retry'; btn.title = err.message; btn.disabled = false; }
+      });
+      li.appendChild(btn);
+    }
+  }
+
+  // ---------------------------------------------------------------- connection requests: count the ones you send
+  // We never click Connect. When YOU click LinkedIn's Connect (on a profile or a search result) and the
+  // button turns into "Pending", the request is recorded in AvaStars (Sourcing → Connection requests).
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest?.('button, a');
+    if (!b) return;
+    const label = clean(`${b.getAttribute('aria-label') || ''} ${b.textContent || ''}`);
+    if (!/^(invite .+ to connect|connect)\b/i.test(label) || /avs-/.test(b.className)) return;
+    const card = b.closest('li');
+    const onProfile = slugOf();
+    const info = onProfile && !card?.querySelector('a[href*="/in/"]') ? { ...readProfile(), slug: onProfile } : (card && readCard(card));
+    const inviteName = (label.match(/^invite (.+?) to connect/i) || [])[1];
+    if (!info?.slug) return;
+    if (inviteName && !info.name) info.name = inviteName;
+    const scope = card || document.querySelector('main') || document.body;
+    let tries = 0;
+    const check = setInterval(async () => {
+      tries++;
+      const pending = [...scope.querySelectorAll('button, span')].some((x) => /^pending$|withdraw invitation|invitation sent/i.test(clean(x.getAttribute?.('aria-label') || x.textContent)));
+      if (pending || tries > 30) {
+        clearInterval(check);
+        if (!pending) return;
+        const { sentInvites = {} } = await chrome.storage.local.get('sentInvites');
+        if (sentInvites[info.slug]) return;
+        const res = await chrome.runtime.sendMessage({ type: 'avs-linkedin-prospect', profile: { ...info, connect_sent: true } }).catch(() => null);
+        if (res?.ok) {
+          sentInvites[info.slug] = Date.now();
+          await chrome.storage.local.set({ sentInvites: Object.fromEntries(Object.entries(sentInvites).slice(-5000)) });
+        }
+      }
+    }, 1000);
+  }, true);
+
   let timer = null;
-  const schedule = () => { clearTimeout(timer); timer = setTimeout(() => { decorate().catch(() => {}); profileButton().catch(() => {}); }, 500); };
+  const schedule = () => { clearTimeout(timer); timer = setTimeout(() => { decorate().catch(() => {}); profileButton().catch(() => {}); decorateResults().catch(() => {}); }, 500); };
   new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
   schedule();
 })();

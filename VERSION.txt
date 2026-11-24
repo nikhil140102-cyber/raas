@@ -1,3 +1,9 @@
+AvaStars Hire v6.6 (patch 36) - Sourcing: top 20 + connection requests
+- Sourcing → pick a job → "Top 20" saved prospects ranked by match % with a "Connect on LinkedIn" button (opens the profile; marks the request sent, with Undo); "Score N more prospects for this job"
+- Connection requests are counted: today / last 7 days (vs LinkedIn's ~100 a week) / all time, accepted, and a full log (who, when, by whom, status)
+- Extension 1.7: a "Save" button next to every person in LinkedIn search results; requests you send with LinkedIn's own Connect button are recorded automatically when they turn "Pending" (the extension never clicks Connect)
+- New prospect statuses: Request sent, Connected
+
 AvaStars Hire v6.5 (patch 35) - Post, schedule and source
 - Extension 1.6 "Post a job": pick an AvaStars job → Post on Indeed / Post on LinkedIn opens the portal and fills the form (title, company, location, description, apply link…); every field also has a Copy button. The person checks it and clicks the portal's own Publish, then "I've published it" saves the live link
 - Scheduled posting (Job → Post & announce → Schedule): pick Indeed/LinkedIn, date-time and who publishes; at that time they get a dashboard reminder, a Chrome notification and a count on the extension icon, with a Start button

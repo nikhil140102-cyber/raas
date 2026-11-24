@@ -162,7 +162,7 @@ chrome.notifications.onClicked.addListener(async (id) => {
 // Sourcing: "Save to AvaStars" on a LinkedIn profile.
 chrome.runtime.onMessage.addListener((m, sender, reply) => {
   if (m?.type !== 'avs-linkedin-prospect') return false;
-  if (!/^https:\/\/([a-z0-9-]+\.)*linkedin\.com\/in\//.test(sender?.url || '')) { reply({ ok: false, error: 'Open a LinkedIn profile first' }); return false; }
+  if (!/^https:\/\/([a-z0-9-]+\.)*linkedin\.com\/(in|search)\//.test(sender?.url || '')) { reply({ ok: false, error: 'Open a LinkedIn profile or search first' }); return false; }
   (async () => {
     const cfg = await chrome.storage.local.get(['appUrl', 'apiKey', 'jobChoice']);
     if (!cfg.appUrl || !cfg.apiKey) throw new Error('Not connected. In AvaStars open "Chrome extension" and click Connect.');

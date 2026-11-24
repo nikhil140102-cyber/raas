@@ -3,7 +3,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one, logActivity } from '@/lib/db';
 import { requirePerm } from '@/lib/auth';
-import { addToJob } from '@/lib/ingest';
+import { addToJob, saveScore } from '@/lib/ingest';
+import { scoreMatch } from '@/lib/ai';
 import { SOURCING_STATUSES } from '@/lib/sourcing';
 
 
@@ -28,4 +29,34 @@ export async function addProspectToJob(formData) {
   await addToJob(job.id, id, 'LinkedIn sourcing');
   revalidatePath('/sourcing'); revalidatePath('/pipeline');
   redirect(`${back}${back.includes('?') ? '&' : '?'}msg=${encodeURIComponent(`Added to ${job.title}.`)}`);
+}
+
+/** "Connect on LinkedIn" in the Sourcing table: opens the profile (in the browser) and records the request. */
+export async function markConnectSent(formData) {
+  const me = await requirePerm('candidates.edit');
+  const id = Number(formData.get('cand_id')) || 0;
+  const undo = formData.get('undo') === '1';
+  if (undo) await q(`UPDATE candidates SET connect_sent_at = NULL, connect_sent_by = NULL, sourcing_status = CASE WHEN sourcing_status = 'request_sent' THEN 'to_contact' ELSE sourcing_status END WHERE id = $1`, [id]);
+  else {
+    await q(`UPDATE candidates SET connect_sent_at = COALESCE(connect_sent_at, now()), connect_sent_by = COALESCE(connect_sent_by, $2),
+      sourcing_status = CASE WHEN sourcing_status IN ('to_contact') OR sourcing_status IS NULL THEN 'request_sent' ELSE sourcing_status END WHERE id = $1`, [id, me.id]);
+    await logActivity(id, null, `LinkedIn connection request sent by ${me.name}.`);
+  }
+  revalidatePath('/sourcing');
+}
+
+/** Scores every saved prospect against one job, so the "Top 20" table can rank them. */
+export async function scoreProspects(formData) {
+  await requirePerm('candidates.edit');
+  const jobId = Number(formData.get('job_id')) || 0;
+  const job = await one('SELECT * FROM jobs WHERE id = $1', [jobId]);
+  if (!job) redirect('/sourcing');
+  const rows = await q(`SELECT c.* FROM candidates c WHERE c.sourcing_status IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM candidate_scores s WHERE s.candidate_id = c.id AND s.job_id = $1) ORDER BY c.created_at DESC LIMIT 150`, [jobId]);
+  for (const c of rows) {
+    const r = await scoreMatch(job, c).catch(() => null);
+    if (r) await saveScore(job.id, c.id, r.score, r.detail);
+  }
+  revalidatePath('/sourcing');
+  redirect(`/sourcing?job=${jobId}&msg=${encodeURIComponent(`${rows.length} prospect(s) scored for ${job.title}.`)}#top`);
 }
