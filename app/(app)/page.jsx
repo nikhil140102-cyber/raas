@@ -5,6 +5,7 @@ import { Header, Kpi, Pill, Flash } from '@/components/ui';
 import { loadSample } from '../_actions/settings';
 import { requireUser } from '@/lib/auth';
 import { can } from '@/lib/roles';
+import { scheduleName } from '@/lib/social';
 
 
 export const metadata = { title: 'Dashboard — AvaStars Hire' };
@@ -72,7 +73,7 @@ export default async function Dashboard({ searchParams }) {
           <strong>Job posts to publish ({duePosts.length})</strong>
           {duePosts.map((d) => (
             <div key={d.id} className="row small" style={{ justifyContent: 'space-between', gap: 10 }}>
-              <span>{d.title} on <strong>{d.portal === 'indeed' ? 'Indeed' : 'LinkedIn'}</strong> · {new Date(d.scheduled_at) <= new Date() ? 'due now' : `at ${new Date(d.scheduled_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}`}{d.note ? ` · ${d.note}` : ''}</span>
+              <span>{d.title} on <strong>{scheduleName(d.portal)}</strong> · {new Date(d.scheduled_at) <= new Date() ? 'due now' : `at ${new Date(d.scheduled_at).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: 'numeric', minute: '2-digit' })}`}{d.note ? ` · ${d.note}` : ''}</span>
               <Link className="btn sm" href={`/jobs/${d.job_id}/announce#schedule`}>Open</Link>
             </div>
           ))}

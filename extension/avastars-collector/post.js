@@ -136,9 +136,9 @@ async function loadSchedules() {
   for (const s of poster.items.slice(0, 8)) {
     const when = new Date(s.scheduled_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
     box.append(el('div', { class: `due-item${s.due ? ' due' : ''}` },
-      el('span', { class: 't', text: `${s.title} → ${s.portal === 'indeed' ? 'Indeed' : 'LinkedIn'}` }),
+      el('span', { class: 't', text: `${s.title} → ${({ indeed: 'Indeed job', linkedin: 'LinkedIn job', linkedin_post: 'LinkedIn post' }[s.portal] || s.portal)}` }),
       el('span', { class: 'm', text: `${s.due ? 'Due now' : when}${s.assignee ? ` · ${s.assignee}` : ''}${s.note ? ` · ${s.note}` : ''}` }),
-      el('button', { type: 'button', class: 'btn sm primary', text: 'Start', onclick: () => { $('postJob').value = String(s.job_id); startPost(s.portal, s.id); } })));
+      el('button', { type: 'button', class: 'btn sm primary', text: 'Start', onclick: () => { $('postJob').value = String(s.job_id); if (s.portal === 'linkedin_post') startLinkedInPost(s); else startPost(s.portal, s.id); } })));
   }
   $('dueWrap').hidden = !poster.items.length;
   chrome.action.setBadgeText({ text: due.length ? String(due.length) : '' }).catch(() => {});
@@ -148,6 +148,18 @@ function fillJobs2() {
   const sel = $('postJob'); const cur = sel.value; sel.replaceChildren();
   for (const j of state.jobs) sel.append(el('option', { value: String(j.id), text: `${j.title}${j.client ? ` · ${j.client}` : ''}` }));
   if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
+}
+
+/** A scheduled LinkedIn feed post: get its text and let LinkedIn's tab write it in; the person clicks Post. */
+async function startLinkedInPost(s) {
+  if (!(await connect())) { $('postMsg').textContent = 'Connect to AvaStars first.'; return; }
+  $('postMsg').textContent = 'Getting the post…'; $('postMsg').className = 'tiny strong';
+  try {
+    const kit = await call(`/api/inbound/postkit?job=${encodeURIComponent(s.job_id)}&portal=linkedin_post&schedule=${encodeURIComponent(s.id)}`);
+    const r = await chrome.runtime.sendMessage({ type: 'avs-li-post', text: kit.text, jobId: s.job_id, scheduleId: s.id });
+    if (!r?.ok) throw new Error(r?.error || 'Could not open LinkedIn.');
+    $('postMsg').textContent = 'LinkedIn is opening with the post written in. Check it and click Post. It is marked done in AvaStars when you post.';
+  } catch (e) { $('postMsg').textContent = e.message; $('postMsg').className = 'tiny strong err'; }
 }
 
 async function startPost(portal, scheduleId = null) {

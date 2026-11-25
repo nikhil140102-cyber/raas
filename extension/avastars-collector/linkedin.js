@@ -214,7 +214,7 @@
     const b = e.target.closest?.('button, a, [role="button"], [role="menuitem"]');
     if (!b) return;
     const label = clean(`${b.getAttribute('aria-label') || ''} ${b.textContent || ''}`);
-    if (!/^(invite .+ to connect|connect)\b/i.test(label) || /avs-/.test(b.className)) return;
+    if (window.__avsAutoConnect || !/^(invite .+ to connect|connect)\b/i.test(label) || /avs-/.test(b.className)) return;
     const card = b.closest('li');
     const onProfile = slugOf();
     const info = onProfile && !card?.querySelector('a[href*="/in/"]') ? { ...readProfile(), slug: onProfile } : (card && readCard(card));
@@ -239,6 +239,140 @@
       }
     }, 1000);
   }, true);
+
+
+  // ---------------------------------------------------------------- "Send connection request" from the AvaStars app
+  // Runs only in a tab the extension opened for that click: finds Connect on the profile (or under "More"),
+  // clicks it, then "Send without a note", and waits for LinkedIn to show Pending.
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const visible = (el) => !!el && el.getClientRects().length > 0;
+  const waitFor = async (fn, ms = 10000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await sleep(300); } return null; };
+  function toast(text, kind = '') {
+    let t = document.getElementById('avs-auto-toast');
+    if (!t) { t = document.createElement('div'); t.id = 'avs-auto-toast'; document.body.appendChild(t); }
+    t.className = `avs-auto-toast ${kind}`; t.textContent = `AvaStars: ${text}`;
+  }
+  const labelOf = (el) => clean(`${el.getAttribute('aria-label') || ''} ${el.textContent || ''}`);
+  async function autoConnect(job) {
+    const slug = slugOf();
+    if (!slug || decodeURIComponent(slug).toLowerCase() !== job.slug) return;
+    toast('sending connection request…');
+    const h1 = await waitFor(() => document.querySelector('main h1'), 15000);
+    if (!h1) throw new Error('The profile did not load.');
+    await sleep(1200);
+    const top = h1.closest('section') || document.querySelector('main');
+    const isPending = () => [...top.querySelectorAll('button, [role="button"]')].some((b) => visible(b) && /^pending\b|withdraw invitation/i.test(labelOf(b)));
+    const isConnected = () => /·\s*1st\b/.test(clean(top.textContent)) || [...top.querySelectorAll('span')].some((x) => /^1st( degree connection)?$/i.test(clean(x.textContent)));
+    if (isPending()) return 'already';
+    if (isConnected()) return 'connected';
+    const connectRx = /^(invite .+ to connect|connect)$/i;
+    let btn = [...top.querySelectorAll('button, [role="button"]')].find((b) => visible(b) && connectRx.test(clean(b.getAttribute('aria-label') || '')) ) ||
+      [...top.querySelectorAll('button')].find((b) => visible(b) && /^connect$/i.test(clean(b.textContent)));
+    if (!btn) {
+      const more = [...top.querySelectorAll('button')].find((b) => visible(b) && /^more( actions)?$/i.test(clean(b.getAttribute('aria-label') || b.textContent)));
+      if (more) {
+        more.click();
+        btn = await waitFor(() => [...document.querySelectorAll('[role="button"], [role="menuitem"], button')].find((b) => visible(b) && /^invite .+ to connect$/i.test(clean(b.getAttribute('aria-label') || ''))), 4000);
+      }
+    }
+    if (!btn) throw new Error('LinkedIn shows no Connect option for this person (they may only allow Follow).');
+    btn.click();
+    const sendBtn = await waitFor(() => {
+      const dlg = [...document.querySelectorAll('[role="dialog"], .artdeco-modal')].find(visible);
+      if (!dlg) return isPending() ? 'done' : null;
+      if (dlg.querySelector('input[type="email"], input[name="email"]')) return 'email';
+      return [...dlg.querySelectorAll('button')].find((b) => visible(b) && !b.disabled && /^(send without a note|send now|send|send invitation)$/i.test(clean(b.getAttribute('aria-label') || b.textContent)));
+    }, 8000);
+    if (sendBtn === 'email') throw new Error('LinkedIn asks for their email address to connect. Finish it on this tab.');
+    if (!sendBtn) throw new Error('LinkedIn did not show the send step. Finish it on this tab.');
+    if (sendBtn !== 'done') sendBtn.click();
+    const ok = await waitFor(isPending, 10000);
+    if (!ok) {
+      const dlg = [...document.querySelectorAll('[role="dialog"], .artdeco-modal')].find(visible);
+      if (dlg && /weekly|limit|too many/i.test(clean(dlg.textContent))) throw new Error('LinkedIn says you reached its invitation limit.');
+      throw new Error('LinkedIn did not confirm the request. Check this tab.');
+    }
+    return 'sent';
+  }
+  (async () => {
+    if (!slugOf()) return;
+    const { job } = await chrome.runtime.sendMessage({ type: 'avs-li-connect-job' }).catch(() => ({ job: null }));
+    if (!job) return;
+    window.__avsAutoConnect = true;
+    try {
+      const result = await autoConnect(job);
+      if (result === 'connected') { toast('you are already connected with this person.', 'ok'); await chrome.runtime.sendMessage({ type: 'avs-li-connect-done', ok: false }); return; }
+      const info = { ...readProfile(), slug: slugOf(), connect_sent: true };
+      if (!info.name && job.name) info.name = job.name;
+      const res = await chrome.runtime.sendMessage({ type: 'avs-linkedin-prospect', profile: info }).catch((e) => ({ ok: false, error: e.message }));
+      if (!res?.ok) throw new Error(`Sent on LinkedIn, but AvaStars could not record it: ${res?.error || 'no answer'}`);
+      const { sentInvites = {} } = await chrome.storage.local.get('sentInvites');
+      sentInvites[info.slug] = Date.now();
+      await chrome.storage.local.set({ sentInvites });
+      toast(result === 'already' ? 'request was already pending — recorded in AvaStars.' : 'connection request sent and recorded ✓', 'ok');
+      await chrome.runtime.sendMessage({ type: 'avs-li-connect-done', ok: true, from: job.from });
+    } catch (e) {
+      toast(e.message, 'err');
+      await chrome.runtime.sendMessage({ type: 'avs-li-connect-done', ok: false }).catch(() => {});
+    }
+  })();
+
+
+  // ---------------------------------------------------------------- "Create post on LinkedIn" from AvaStars
+  // Only in a tab the extension opened for that click: "Start a post" → write the text. We never click Post.
+  async function writePost(job) {
+    toast('opening the post box…');
+    const editorSel = '[role="dialog"] .ql-editor[contenteditable="true"], .share-box .ql-editor[contenteditable="true"], [role="dialog"] [contenteditable="true"][role="textbox"]';
+    let editor = document.querySelector(editorSel);
+    if (!editor) {
+      const start = await waitFor(() => [...document.querySelectorAll('button, [role="button"]')].find((b) => visible(b) && /^start a post\b/i.test(clean(b.getAttribute('aria-label') || b.textContent))), 20000);
+      if (!start) throw new Error('Could not find "Start a post". Click it yourself and paste (Ctrl+V).');
+      start.click();
+      editor = await waitFor(() => document.querySelector(editorSel), 10000);
+    }
+    if (!editor) throw new Error('The post box did not open. Click "Start a post" and paste (Ctrl+V).');
+    editor.focus();
+    await sleep(300);
+    // Paste keeps line breaks the way LinkedIn's editor expects.
+    const dt = new DataTransfer();
+    dt.setData('text/plain', job.text);
+    editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    await sleep(500);
+    if (clean(editor.textContent).length < Math.min(20, clean(job.text).length)) {
+      const lines = job.text.split('\n');
+      lines.forEach((line, i) => {
+        if (line) document.execCommand('insertText', false, line);
+        if (i < lines.length - 1) document.execCommand('insertParagraph');
+      });
+    }
+    await sleep(300);
+    if (clean(editor.textContent).length < 5) throw new Error('Could not type the post. Paste it yourself (Ctrl+V).');
+    toast('post written ✓ Check it, then click Post — or the clock icon to schedule it.', 'ok');
+    // When they click Post / Schedule and the box closes, mark it done in AvaStars.
+    const dialog = editor.closest('[role="dialog"], .artdeco-modal') || document.body;
+    const onClick = (e) => {
+      const b = e.target.closest?.('button');
+      if (!b || !dialog.contains(b) || !/^(post|schedule)$/i.test(clean(b.textContent))) return;
+      document.removeEventListener('click', onClick, true);
+      (async () => {
+        const closed = await waitFor(() => !document.contains(editor) || !visible(editor), 30000);
+        if (!closed) return;
+        await chrome.runtime.sendMessage({ type: 'avs-li-post-done', jobId: job.jobId, scheduleId: job.scheduleId, text: job.text }).catch(() => {});
+        toast(/schedule/i.test(clean(b.textContent)) ? 'post scheduled ✓ Saved in AvaStars.' : 'posted ✓ Saved in AvaStars share history.', 'ok');
+        setTimeout(() => document.getElementById('avs-auto-toast')?.remove(), 6000);
+      })();
+    };
+    document.addEventListener('click', onClick, true);
+  }
+  (async () => {
+    if (!/^\/feed\/?/.test(location.pathname)) return;
+    const { job } = await chrome.runtime.sendMessage({ type: 'avs-li-post-job' }).catch(() => ({ job: null }));
+    if (!job?.text) return;
+    try { await writePost(job); } catch (e) {
+      try { await navigator.clipboard.writeText(job.text); } catch { /* needs focus */ }
+      toast(e.message, 'err');
+    }
+  })();
 
   let timer = null;
   const schedule = () => { clearTimeout(timer); timer = setTimeout(() => { decorate().catch(() => {}); profileButton().catch(() => {}); decorateResults().catch(() => {}); }, 500); };

@@ -6,7 +6,8 @@ import { Header, Pill, Flash } from '@/components/ui';
 import { CopyButton } from '@/components/client';
 import { fmtDate, appUrl, appUrlProblem } from '@/lib/util';
 import { careersUrl, trackedUrl } from '@/lib/posting';
-import { PLATFORMS, buildPosts, shareLinks, linkedinConfigured, portalKit } from '@/lib/social';
+import { PLATFORMS, buildPosts, shareLinks, linkedinConfigured, portalKit, scheduleName } from '@/lib/social';
+import FoldCard from '@/components/FoldCard';
 import { markPosted } from '../../../../_actions/jobs';
 import PortalKit from './PortalKit';
 import { postToLinkedIn, disconnectLinkedIn } from '../../../../_actions/social';
@@ -63,7 +64,8 @@ export default async function AnnouncePage({ params, searchParams }) {
         <section className="col-main">
           <h2>Social media posts</h2>
           {PLATFORMS.map((p) => (
-            <PostCard key={p.id} jobId={job.id} platform={p.id} name={p.name} hint={p.hint} samples={posts[p.id]} shareUrl={links[p.id]} link={trackedUrl(job, p.id)} defaultOpen={p.id === 'linkedin'}>
+            <PostCard key={p.id} jobId={job.id} platform={p.id} name={p.name} hint={p.hint} samples={posts[p.id]} shareUrl={links[p.id]} link={trackedUrl(job, p.id)} defaultOpen={p.id === 'linkedin'}
+              team={p.id === 'linkedin' ? team.map((t) => ({ id: t.id, name: t.name })) : null} userId={user.id} istNow={istNow}>
               {p.id === 'linkedin' && connected ? (
                 <form id="li-form-linkedin" action={postToLinkedIn}>
                   <input type="hidden" name="job_id" value={job.id} />
@@ -77,7 +79,7 @@ export default async function AnnouncePage({ params, searchParams }) {
           {['indeed', 'naukri'].map((portal) => {
             const row = postings[portal] || {};
             return (
-              <PortalKit key={portal} kit={portalKit(job, portal)}>
+              <PortalKit key={portal} portal={portal} kit={portalKit(job, portal)}>
                 <form action={markPosted} className="row" style={{ alignItems: 'flex-end', gap: 10 }}>
                   <input type="hidden" name="job_id" value={job.id} /><input type="hidden" name="portal" value={portal} />
                   <label className="field" style={{ flex: '1 1 280px' }}>After publishing, paste the live job link<input name="url" type="url" defaultValue={row.url || ''} placeholder="https://…" /></label>
@@ -90,22 +92,21 @@ export default async function AnnouncePage({ params, searchParams }) {
         </section>
 
         <aside className="col-side">
-          <section className="card">
-            <h2>Apply link</h2>
+          <FoldCard id="side-apply" title="Apply link" defaultOpen>
             <p className="small" style={{ wordBreak: 'break-all' }}>{link}</p>
             <div className="row" style={{ gap: 8 }}><CopyButton text={link} label="Copy link" /><a className="btn sm" href={link} target="_blank" rel="noreferrer">Open</a></div>
             <p className="tiny muted">Anyone can open it and apply. No login needed. The link preview shows the job title, location and salary.</p>
             <CopyButton text={appUrl('/careers')} label="Copy link to all open jobs" />
-          </section>
+          </FoldCard>
 
-          <section id="schedule" className="card">
-            <h2>Schedule posting on Indeed / LinkedIn</h2>
-            <p className="tiny muted">At the chosen time the person you pick gets a reminder on their dashboard and in the AvaStars Chrome extension. The extension fills the portal&apos;s form; they check it and click Publish.</p>
+          <FoldCard id="side-schedule" anchor="schedule" title="Schedule posting" defaultOpen>
+            <p className="tiny muted">At the chosen time the person you pick gets a reminder on their dashboard and in the AvaStars Chrome extension. The extension fills the job form or writes the LinkedIn post; they check it and click Publish / Post.</p>
             <form action={createSchedule} className="stack" style={{ gap: 8 }}>
               <input type="hidden" name="job_id" value={job.id} />
               <div className="row" style={{ gap: 14 }}>
-                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="indeed" defaultChecked /> Indeed</label>
-                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="linkedin" defaultChecked /> LinkedIn</label>
+                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="indeed" defaultChecked /> Indeed job</label>
+                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="linkedin" defaultChecked /> LinkedIn job</label>
+                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="linkedin_post" /> LinkedIn post</label>
               </div>
               <label className="field">When (India time)<input type="datetime-local" name="when" min={istNow} defaultValue={istNow} required /></label>
               <label className="field">Who publishes it
@@ -122,7 +123,7 @@ export default async function AnnouncePage({ params, searchParams }) {
                 {schedules.map((s) => (
                   <div key={s.id} className="row small" style={{ justifyContent: 'space-between', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 6 }}>
                     <span>
-                      <strong>{s.portal === 'indeed' ? 'Indeed' : 'LinkedIn'}</strong> · {ist(s.scheduled_at)} · {s.assignee || 'anyone'}
+                      <strong>{scheduleName(s.portal)}</strong> · {ist(s.scheduled_at)} · {s.assignee || 'anyone'}
                       {s.note ? <span className="tiny muted"> · {s.note}</span> : null}
                     </span>
                     {s.status === 'pending' ? (
@@ -135,10 +136,9 @@ export default async function AnnouncePage({ params, searchParams }) {
                 ))}
               </div>
             ) : null}
-          </section>
+          </FoldCard>
 
-          <section className="card">
-            <h2>Post directly on LinkedIn</h2>
+          <FoldCard id="side-li-api" title="Post directly on LinkedIn">
             {!linkedinConfigured() ? (
               <p className="small muted">Optional. Add LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET (a free LinkedIn developer app with “Share on LinkedIn”) to post with one click. Until then, use “Copy + open LinkedIn”.</p>
             ) : connected ? (
@@ -152,27 +152,26 @@ export default async function AnnouncePage({ params, searchParams }) {
                 <a className="btn" href={`/api/linkedin/connect?back=${encodeURIComponent(back)}`}>Connect my LinkedIn</a>
               </>
             )}
-          </section>
+          </FoldCard>
 
-          <section className="card">
-            <h2>How it works</h2>
+          <FoldCard id="side-how" title="How it works">
             <ol className="small" style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6, color: 'var(--ink2)' }}>
               <li>Pick a sample style (Professional, Short &amp; quick, Referral ask).</li>
               <li>Edit the text if you like.</li>
               <li>Click Share or Copy + open. The post opens in that app.</li>
               <li>For Indeed and Naukri, copy each field into their job form, then paste the live link back here.</li>
+              <li>With the AvaStars extension, “Create post on LinkedIn” writes the post for you; you click Post (or LinkedIn&apos;s clock icon to schedule it).</li>
             </ol>
-          </section>
+          </FoldCard>
 
-          <section id="history" className="card">
-            <h2>Share history</h2>
+          <FoldCard id="side-history" anchor="history" title="Share history" defaultOpen>
             {history.length ? history.map((h) => (
               <div key={h.id} className="row small" style={{ justifyContent: 'space-between', gap: 8 }}>
                 <span><span className="strong">{PLATFORMS.find((p) => p.id === h.platform)?.name || { indeed: 'Indeed', naukri: 'Naukri', x: 'X (Twitter)', facebook: 'Facebook', instagram: 'Instagram' }[h.platform] || h.platform}</span> · {h.who || '—'} · {fmtDate(h.created_at)}</span>
                 {h.status === 'posted' && h.url ? <a href={h.url} target="_blank" rel="noreferrer">{['indeed', 'naukri'].includes(h.platform) ? 'View job' : 'View post'}</a> : <Pill tone={h.status === 'failed' ? 'red' : 'green'}>{h.status}</Pill>}
               </div>
             )) : <p className="small muted">Nothing shared yet.</p>}
-          </section>
+          </FoldCard>
         </aside>
       </div>
     </>

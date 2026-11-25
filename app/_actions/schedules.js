@@ -5,26 +5,28 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { q, one } from '@/lib/db';
 import { requirePerm } from '@/lib/auth';
+import { SCHEDULE_PORTALS, scheduleName } from '@/lib/social';
 
 const back = (jobId, msg) => redirect(`/jobs/${jobId}/announce?msg=${encodeURIComponent(msg)}#schedule`);
 
 export async function createSchedule(formData) {
   const me = await requirePerm('jobs.post');
   const jobId = Number(formData.get('job_id')) || 0;
-  const portals = formData.getAll('portal').filter((p) => ['indeed', 'linkedin'].includes(p));
+  const portals = formData.getAll('portal').filter((p) => p in SCHEDULE_PORTALS);
+  const body = String(formData.get('body') || '').trim().slice(0, 3000) || null; // the LinkedIn post text (optional)
   const when = String(formData.get('when') || ''); // datetime-local, entered in India time
   const assigned = Number(formData.get('assigned_to')) || null;
-  if (!portals.length) back(jobId, 'Tick Indeed and/or LinkedIn.');
+  if (!portals.length) back(jobId, 'Tick at least one: Indeed job, LinkedIn job or LinkedIn post.');
   const at = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(when) ? new Date(`${when}:00+05:30`) : null;
   if (!at || Number.isNaN(at.getTime())) back(jobId, 'Pick a date and time.');
   if (!(await one('SELECT id FROM jobs WHERE id = $1', [jobId]))) back(jobId, 'Job not found.');
   if (assigned && !(await one(`SELECT id FROM users WHERE id = $1 AND active AND role IN ('admin','hr','intern')`, [assigned]))) back(jobId, 'Pick a team member.');
   for (const portal of portals) {
-    await q('INSERT INTO post_schedules (job_id, portal, scheduled_at, assigned_to, note, created_by) VALUES ($1,$2,$3,$4,$5,$6)',
-      [jobId, portal, at.toISOString(), assigned, String(formData.get('note') || '').slice(0, 300) || null, me.id]);
+    await q('INSERT INTO post_schedules (job_id, portal, scheduled_at, assigned_to, note, created_by, body) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [jobId, portal, at.toISOString(), assigned, String(formData.get('note') || '').slice(0, 300) || null, me.id, portal === 'linkedin_post' ? body : null]);
   }
   revalidatePath(`/jobs/${jobId}/announce`); revalidatePath('/');
-  back(jobId, `Scheduled: ${portals.map((p) => (p === 'indeed' ? 'Indeed' : 'LinkedIn')).join(' + ')} on ${at.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}.`);
+  back(jobId, `Scheduled: ${portals.map(scheduleName).join(' + ')} on ${at.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' })}.`);
 }
 
 export async function updateSchedule(formData) {

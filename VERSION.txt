@@ -1,3 +1,17 @@
+AvaStars Hire v6.8.0 (patch 45) + extension 1.9.0
+- Post & announce → LinkedIn card: "Create post on LinkedIn" — the extension opens LinkedIn, clicks "Start a post" and writes the text; you click Post (or LinkedIn's clock icon to schedule)
+- "Schedule this post": pick a time and who posts it; at that time they get a reminder and the extension writes this exact text into LinkedIn
+- Schedule card: new "LinkedIn post" option next to Indeed job / LinkedIn job
+- When the post is published (or scheduled on LinkedIn) it is saved in Share history and the schedule closes
+- Indeed, Naukri and every side card (Apply link, Schedule posting, Post directly, How it works, Share history) now have Open / Close, remembered in your browser
+- Needs a database update: post_schedules.body (added automatically)
+
+AvaStars Hire v6.7.4 (patch 44) + extension 1.8.0
+- Sourcing: "Send connection request" sends it on LinkedIn for you (extension 1.8+): opens the profile, clicks Connect → "Send without a note", waits for Pending, records it, closes the tab and returns to AvaStars
+- One click = one request; max 25 a day from the extension to protect the LinkedIn account
+- Without the extension the profile just opens ("Click Connect on LinkedIn" + "I sent it")
+- Same button in the Top 20 table
+
 AvaStars Hire v6.7.3 (patch 43) + extension 1.7.4
 - Sourcing: "Connect on LinkedIn" now only opens the profile. It no longer marks "Request sent" by itself
 - The row shows "Waiting for Connect on LinkedIn…" until the extension sees LinkedIn's button turn to Pending, then switches to "Request sent" when you come back to the tab

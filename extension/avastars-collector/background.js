@@ -154,7 +154,7 @@ async function checkDuePosts() {
       chrome.notifications.create(`avs-post-${s.id}`, {
         type: 'basic', iconUrl: 'icons/icon128.png', priority: 2,
         title: `Time to post: ${s.title}`,
-        message: `Publish it on ${s.portal === 'indeed' ? 'Indeed' : 'LinkedIn'}. Click the AvaStars icon → Post a job → Start.${s.note ? ` Note: ${s.note}` : ''}`,
+        message: `Publish the ${({ indeed: 'Indeed job', linkedin: 'LinkedIn job', linkedin_post: 'LinkedIn post' }[s.portal] || s.portal)}. Click the AvaStars icon → Post a job → Start.${s.note ? ` Note: ${s.note}` : ''}`,
       });
     }
     await chrome.storage.local.set({ notifiedPosts: [...seen].slice(-300) });
@@ -187,4 +187,92 @@ chrome.runtime.onMessage.addListener((m, sender, reply) => {
     return data;
   })().then(reply).catch((e) => reply({ ok: false, error: e.message }));
   return true;
+});
+
+// ---------------------------------------------------------------- "Send connection request" from the AvaStars Sourcing page
+// One click in the app = one request. The app page asks; we open the profile in a new tab and the LinkedIn
+// script there clicks Connect → "Send without a note". Capped per day to stay well inside LinkedIn's limits.
+const AUTO_CONNECT_DAILY_CAP = 25;
+const todayKey = () => new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
+chrome.runtime.onMessage.addListener((m, sender, reply) => {
+  if (m?.type === 'avs-li-connect') {
+    (async () => {
+      const { appUrl, apiKey, autoConnectLog = {} } = await chrome.storage.local.get(['appUrl', 'apiKey', 'autoConnectLog']);
+      if (!appUrl || !apiKey) return { ok: false, error: 'The extension is not connected. Open "Chrome extension" in AvaStars and click Connect.' };
+      if (!sender?.url || new URL(sender.url).origin !== new URL(appUrl).origin) return { ok: false, error: 'Only your AvaStars app can ask for this.' };
+      const day = todayKey();
+      const used = autoConnectLog[day] || 0;
+      if (used >= AUTO_CONNECT_DAILY_CAP) return { ok: false, error: `Daily limit of ${AUTO_CONNECT_DAILY_CAP} requests reached (protects your LinkedIn account). Try tomorrow.` };
+      const slug = (m.url.match(/linkedin\.com\/in\/([^/?#]+)/i) || [])[1];
+      const tab = await chrome.tabs.create({ url: `https://www.linkedin.com/in/${slug}/`, active: true });
+      await chrome.storage.session.set({ [`autoConnect:${tab.id}`]: { slug: decodeURIComponent(slug).toLowerCase(), name: m.name, at: Date.now(), from: sender.tab?.id || null } });
+      await chrome.storage.local.set({ autoConnectLog: { [day]: used + 1 } });
+      return { ok: true };
+    })().then(reply).catch((e) => reply({ ok: false, error: e.message }));
+    return true;
+  }
+  if (m?.type === 'avs-li-connect-job') {
+    (async () => {
+      const key = `autoConnect:${sender?.tab?.id}`;
+      const job = (await chrome.storage.session.get(key))[key];
+      if (!job || Date.now() - job.at > 3 * 60e3) return { job: null };
+      await chrome.storage.session.remove(key);
+      return { job };
+    })().then(reply).catch(() => reply({ job: null }));
+    return true;
+  }
+  if (m?.type === 'avs-li-connect-done') {
+    (async () => {
+      if (m.ok) {
+        // Back to the AvaStars tab; the row there turns "Request sent" by itself.
+        setTimeout(() => { if (sender?.tab?.id) chrome.tabs.remove(sender.tab.id).catch(() => {}); }, 2500);
+        if (m.from) chrome.tabs.update(m.from, { active: true }).catch(() => {});
+      } else {
+        const { autoConnectLog = {} } = await chrome.storage.local.get('autoConnectLog');
+        const day = todayKey();
+        if (autoConnectLog[day]) await chrome.storage.local.set({ autoConnectLog: { [day]: autoConnectLog[day] - 1 } });
+      }
+      return { ok: true };
+    })().then(reply).catch(() => reply({ ok: false }));
+    return true;
+  }
+  return false;
+});
+
+// ---------------------------------------------------------------- "Create post on LinkedIn" (app button or a scheduled LinkedIn post)
+// Opens LinkedIn, the LinkedIn script clicks "Start a post" and writes the text. The person clicks Post (or schedules it).
+chrome.runtime.onMessage.addListener((m, sender, reply) => {
+  if (m?.type === 'avs-li-post') {
+    (async () => {
+      const { appUrl, apiKey } = await chrome.storage.local.get(['appUrl', 'apiKey']);
+      if (!appUrl || !apiKey) return { ok: false, error: 'The extension is not connected. Open "Chrome extension" in AvaStars and click Connect.' };
+      const fromPanel = (sender?.url || '').startsWith(`chrome-extension://${chrome.runtime.id}/`);
+      if (!fromPanel && (!sender?.url || new URL(sender.url).origin !== new URL(appUrl).origin)) return { ok: false, error: 'Only your AvaStars app can ask for this.' };
+      const tab = await chrome.tabs.create({ url: 'https://www.linkedin.com/feed/', active: true });
+      await chrome.storage.session.set({ [`liPost:${tab.id}`]: { text: String(m.text || '').slice(0, 3000), jobId: m.jobId || null, scheduleId: m.scheduleId || null, at: Date.now() } });
+      return { ok: true };
+    })().then(reply).catch((e) => reply({ ok: false, error: e.message }));
+    return true;
+  }
+  if (m?.type === 'avs-li-post-job') {
+    (async () => {
+      const key = `liPost:${sender?.tab?.id}`;
+      const job = (await chrome.storage.session.get(key))[key];
+      if (!job || Date.now() - job.at > 5 * 60e3) return { job: null };
+      await chrome.storage.session.remove(key);
+      return { job };
+    })().then(reply).catch(() => reply({ job: null }));
+    return true;
+  }
+  if (m?.type === 'avs-li-post-done') {
+    (async () => {
+      if (!m.jobId) return { ok: true };
+      const { appUrl, apiKey } = await chrome.storage.local.get(['appUrl', 'apiKey']);
+      const r = await fetch(`${appUrl.replace(/\/+$/, '')}/api/inbound/schedules/done`, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: m.jobId, portal: 'linkedin_post', schedule_id: m.scheduleId || null, text: m.text || '' }) });
+      return { ok: r.ok };
+    })().then(reply).catch((e) => reply({ ok: false, error: e.message }));
+    return true;
+  }
+  return false;
 });
