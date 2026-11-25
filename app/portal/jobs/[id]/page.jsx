@@ -5,6 +5,7 @@ import { requireClientUser } from '@/lib/auth';
 import { Pill } from '@/components/ui';
 import { lakh, notice, initials, expRange, fmtDate, REJECT_REASONS } from '@/lib/util';
 import { portalDecision } from '../../../_actions/portal';
+import CardFold, { FoldAll } from '@/components/CardFold';
 
 const COLS = [
   ['review', 'For your review', (a) => a.stage === 'forwarded' && !a.client_decision],
@@ -66,6 +67,7 @@ export default async function PortalJob({ params }) {
           <Pill tone="blue">{counts.working} being screened by AvaStars</Pill>
         </div>
       </div>
+      <div className="row" style={{ justifyContent: 'flex-end' }}><FoldAll /></div>
       <div className="portal-board">
         {COLS.map(([key, label, test]) => {
           const list = apps.filter(test);
@@ -74,18 +76,21 @@ export default async function PortalJob({ params }) {
               <div className="pcol-head"><strong>{label}</strong><span className="muted">{list.length}</span></div>
               {!list.length ? <p className="tiny muted" style={{ padding: '6px 2px' }}>No one here yet.</p> : null}
               {list.map((a) => (
-                <article key={a.id} className="pcard">
-                  <div className="row" style={{ gap: 10, flexWrap: 'nowrap' }}>
-                    <span className="avatar sm">{initials(a.name)}</span>
-                    <div className="stack" style={{ gap: 0, minWidth: 0 }}>
-                      <strong>{shortName(a.name)}</strong>
-                      <span className="tiny muted">{[a.current_title, a.current_company].filter(Boolean).join(' · ')}</span>
+                <CardFold key={a.id} label={shortName(a.name)} head={(
+                  <div className="stack" style={{ gap: 6, minWidth: 0, flex: 1 }}>
+                    <div className="row" style={{ gap: 10, flexWrap: 'nowrap' }}>
+                      <span className="avatar sm">{initials(a.name)}</span>
+                      <div className="stack" style={{ gap: 0, minWidth: 0 }}>
+                        <strong>{shortName(a.name)}</strong>
+                        <span className="tiny muted">{[a.current_title, a.current_company].filter(Boolean).join(' · ')}</span>
+                      </div>
+                    </div>
+                    <div className="row tiny" style={{ gap: 6 }}>
+                      {a.match_score !== null ? <Pill tone="green">Match {a.match_score}%</Pill> : null}
+                      {a.scr?.score ? <Pill tone="blue">Call {a.scr.score}</Pill> : null}
                     </div>
                   </div>
-                  <div className="row tiny" style={{ gap: 6 }}>
-                    {a.match_score !== null ? <Pill tone="green">Match {a.match_score}%</Pill> : null}
-                    {a.scr?.score ? <Pill tone="blue">Call {a.scr.score}</Pill> : null}
-                  </div>
+                )}>
                   <div className="facts tiny">
                     <div className="fact"><span>Exp</span><span>{a.total_exp ? `${a.total_exp} yrs` : '—'}</span></div>
                     <div className="fact"><span>ECTC</span><span>{lakh(a.ectc)}</span></div>
@@ -97,7 +102,7 @@ export default async function PortalJob({ params }) {
                   {key === 'no' && a.client_reason ? <p className="tiny muted" style={{ margin: 0 }}>Reason: {a.client_reason}</p> : null}
                   <a className="btn sm" href={`/portal/resume/${a.id}`}>Resume (PDF)</a>
                   <Actions a={a} step={key} />
-                </article>
+                </CardFold>
               ))}
             </section>
           );

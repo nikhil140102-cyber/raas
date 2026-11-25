@@ -1,3 +1,6 @@
+Patch 49
+- Client portal board: each card shows name + match; the arrow opens / closes the details and buttons. "Show all card details" opens every card
+
 Patch 48
 - Client portal board: after "Shortlist for interview" the client can now Select or Reject the candidate (with reason and comment), or Undo the shortlist
 - Selected column: "Reject (offer withdrawn)" and "Back to interview"
