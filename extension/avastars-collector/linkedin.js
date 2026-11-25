@@ -278,7 +278,7 @@
     if (!btn) throw new Error('LinkedIn shows no Connect option for this person (they may only allow Follow).');
     btn.click();
     const sendBtn = await waitFor(() => {
-      const dlg = [...document.querySelectorAll('[role="dialog"], .artdeco-modal')].find(visible);
+      const dlg = [...document.querySelectorAll('dialog[open], [role="dialog"], .artdeco-modal')].find(visible);
       if (!dlg) return isPending() ? 'done' : null;
       if (dlg.querySelector('input[type="email"], input[name="email"]')) return 'email';
       return [...dlg.querySelectorAll('button')].find((b) => visible(b) && !b.disabled && /^(send without a note|send now|send|send invitation)$/i.test(clean(b.getAttribute('aria-label') || b.textContent)));
@@ -288,7 +288,7 @@
     if (sendBtn !== 'done') sendBtn.click();
     const ok = await waitFor(isPending, 10000);
     if (!ok) {
-      const dlg = [...document.querySelectorAll('[role="dialog"], .artdeco-modal')].find(visible);
+      const dlg = [...document.querySelectorAll('dialog[open], [role="dialog"], .artdeco-modal')].find(visible);
       if (dlg && /weekly|limit|too many/i.test(clean(dlg.textContent))) throw new Error('LinkedIn says you reached its invitation limit.');
       throw new Error('LinkedIn did not confirm the request. Check this tab.');
     }
@@ -322,7 +322,8 @@
   // Only in a tab the extension opened for that click: "Start a post" → write the text. We never click Post.
   async function writePost(job) {
     toast('opening the post box…');
-    const editorSel = '[role="dialog"] .ql-editor[contenteditable="true"], .share-box .ql-editor[contenteditable="true"], [role="dialog"] [contenteditable="true"][role="textbox"]';
+    const editorSel = ['dialog .ProseMirror[contenteditable="true"]', '.ProseMirror[contenteditable="true"][role="textbox"]', 'dialog [contenteditable="true"][role="textbox"]',
+      '[role="dialog"] .ql-editor[contenteditable="true"]', '.share-box .ql-editor[contenteditable="true"]', '[role="dialog"] [contenteditable="true"][role="textbox"]'].join(', ');
     let editor = document.querySelector(editorSel);
     if (!editor) {
       const start = await waitFor(() => [...document.querySelectorAll('button, [role="button"]')].find((b) => visible(b) && /^start a post\b/i.test(clean(b.getAttribute('aria-label') || b.textContent))), 20000);
@@ -349,7 +350,7 @@
     if (clean(editor.textContent).length < 5) throw new Error('Could not type the post. Paste it yourself (Ctrl+V).');
     toast('post written ✓ Check it, then click Post — or the clock icon to schedule it.', 'ok');
     // When they click Post / Schedule and the box closes, mark it done in AvaStars.
-    const dialog = editor.closest('[role="dialog"], .artdeco-modal') || document.body;
+    const dialog = editor.closest('dialog, [role="dialog"], .artdeco-modal') || document.body;
     const onClick = (e) => {
       const b = e.target.closest?.('button');
       if (!b || !dialog.contains(b) || !/^(post|schedule)$/i.test(clean(b.textContent))) return;
@@ -365,7 +366,7 @@
     document.addEventListener('click', onClick, true);
   }
   (async () => {
-    if (!/^\/feed\/?/.test(location.pathname)) return;
+    if (!/^\/(feed|sharing\/compose)\b/.test(location.pathname)) return;
     const { job } = await chrome.runtime.sendMessage({ type: 'avs-li-post-job' }).catch(() => ({ job: null }));
     if (!job?.text) return;
     try { await writePost(job); } catch (e) {

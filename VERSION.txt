@@ -1,3 +1,6 @@
+Extension 1.9.1 (patch 46)
+- "Create post on LinkedIn" works with LinkedIn's new post box (it opens as a pop-up with a new editor); the text is typed in with its line breaks and hashtags
+
 AvaStars Hire v6.8.0 (patch 45) + extension 1.9.0
 - Post & announce → LinkedIn card: "Create post on LinkedIn" — the extension opens LinkedIn, clicks "Start a post" and writes the text; you click Post (or LinkedIn's clock icon to schedule)
 - "Schedule this post": pick a time and who posts it; at that time they get a reminder and the extension writes this exact text into LinkedIn
