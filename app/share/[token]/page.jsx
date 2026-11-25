@@ -60,7 +60,7 @@ export default async function SharePage({ params }) {
               {p.client_decision ? (
                 <form action={clientDecision} className="row" style={{ gap: 10 }}>
                   <input type="hidden" name="token" value={token} /><input type="hidden" name="app_id" value={p.id} /><input type="hidden" name="decision" value="undo" />
-                  <span className={`pill ${p.client_decision === 'yes' ? 'green' : 'red'}`} style={{ height: 32 }}>{p.client_decision === 'yes' ? 'Shortlisted for interview' : `Rejected${p.client_reason ? ` · ${p.client_reason}` : ''}`}</span>
+                  <span className={`pill ${p.client_decision === 'no' ? 'red' : 'green'}`} style={{ height: 32 }}>{p.client_decision === 'yes' ? 'Shortlisted for interview' : p.client_decision === 'selected' ? 'Selected' : `Rejected${p.client_reason ? ` · ${p.client_reason}` : ''}`}</span>
                   <button className="btn" type="submit">Undo</button>
                 </form>
               ) : (

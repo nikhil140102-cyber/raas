@@ -13,6 +13,30 @@ const COLS = [
   ['joined', 'Joined', (a) => a.stage === 'joined'],
   ['no', 'Not selected', (a) => a.client_decision === 'no'],
 ];
+/** The client's buttons for each column of the board. */
+function Actions({ a, step }) {
+  const id = <input type="hidden" name="app_id" value={a.id} />;
+  const undo = (label) => (
+    <form action={portalDecision}>{id}<input type="hidden" name="decision" value="undo" /><button className="linkbtn tiny" type="submit">{label}</button></form>
+  );
+  const decide = (yes, no) => (
+    <form action={portalDecision} className="stack" style={{ gap: 6 }}>
+      {id}
+      <input name="comment" placeholder="Comment (optional)" aria-label="Comment" />
+      <select name="reason" aria-label="Reason if rejecting" defaultValue=""><option value="">Reason if rejecting…</option>{REJECT_REASONS.map((r) => <option key={r}>{r}</option>)}</select>
+      <div className="row" style={{ gap: 6 }}>
+        {yes ? <button className="btn sm success" type="submit" name="decision" value={yes[0]}>{yes[1]}</button> : null}
+        <button className="btn sm danger" type="submit" name="decision" value="no">{no}</button>
+      </div>
+    </form>
+  );
+  if (step === 'review') return decide(['yes', 'Shortlist for interview'], 'Reject');
+  if (step === 'interview') return <>{decide(['select', 'Select'], 'Reject')}{a.client_decision === 'yes' ? undo('Undo shortlist') : null}</>;
+  if (step === 'selected') return <>{decide(null, 'Reject (offer withdrawn)')}{a.client_decision === 'selected' ? undo('Back to interview') : null}</>;
+  if (step === 'no' && a.client_decision === 'no') return undo(a.client_prev_stage === 'interview' ? 'Undo (back to interview)' : a.client_prev_stage === 'selected' ? 'Undo (back to selected)' : 'Undo my decision');
+  return null;
+}
+
 const shortName = (n) => { const p = String(n).split(/\s+/); return `${p[0]} ${p[1] ? `${p[1][0]}.` : ''}`; };
 
 export default async function PortalJob({ params }) {
@@ -22,7 +46,7 @@ export default async function PortalJob({ params }) {
   if (!job) notFound();
   const counts = await one(`SELECT count(*)::int AS sourced, count(*) FILTER (WHERE stage IN ('shortlisted','screening'))::int AS working FROM applications WHERE job_id = $1`, [job.id]);
   const apps = await q(`
-    SELECT a.id, a.stage, a.match_score, a.client_decision, a.client_reason, a.client_comment, a.updated_at,
+    SELECT a.id, a.stage, a.match_score, a.client_decision, a.client_reason, a.client_prev_stage, a.client_comment, a.updated_at,
       c.name, c.current_title, c.current_company, c.location, c.total_exp, c.ectc, c.notice_days,
       (SELECT row_to_json(x) FROM (SELECT score, summary FROM screenings WHERE application_id = a.id AND status = 'completed' ORDER BY id DESC LIMIT 1) x) AS scr,
       (SELECT row_to_json(y) FROM (SELECT round, scheduled_at FROM interviews WHERE application_id = a.id ORDER BY scheduled_at DESC LIMIT 1) y) AS iv
@@ -72,19 +96,7 @@ export default async function PortalJob({ params }) {
                   {a.iv?.scheduled_at && key === 'interview' ? <p className="tiny strong" style={{ margin: 0 }}>{a.iv.round}: {fmtDate(a.iv.scheduled_at)}</p> : null}
                   {key === 'no' && a.client_reason ? <p className="tiny muted" style={{ margin: 0 }}>Reason: {a.client_reason}</p> : null}
                   <a className="btn sm" href={`/portal/resume/${a.id}`}>Resume (PDF)</a>
-                  {key === 'review' ? (
-                    <form action={portalDecision} className="stack" style={{ gap: 6 }}>
-                      <input type="hidden" name="app_id" value={a.id} />
-                      <input name="comment" placeholder="Comment (optional)" aria-label="Comment" />
-                      <select name="reason" aria-label="Reason if rejecting" defaultValue=""><option value="">Reason if rejecting…</option>{REJECT_REASONS.map((r) => <option key={r}>{r}</option>)}</select>
-                      <div className="row" style={{ gap: 6 }}>
-                        <button className="btn sm success" type="submit" name="decision" value="yes">Shortlist for interview</button>
-                        <button className="btn sm danger" type="submit" name="decision" value="no">Reject</button>
-                      </div>
-                    </form>
-                  ) : (key === 'interview' || key === 'no') && a.client_decision ? (
-                    <form action={portalDecision}><input type="hidden" name="app_id" value={a.id} /><input type="hidden" name="decision" value="undo" /><button className="btn sm" type="submit">Undo my decision</button></form>
-                  ) : null}
+                  <Actions a={a} step={key} />
                 </article>
               ))}
             </section>

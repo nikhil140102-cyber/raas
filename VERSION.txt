@@ -1,3 +1,10 @@
+Patch 48
+- Client portal board: after "Shortlist for interview" the client can now Select or Reject the candidate (with reason and comment), or Undo the shortlist
+- Selected column: "Reject (offer withdrawn)" and "Back to interview"
+- Not selected: Undo puts the candidate back where they were (review, interview or selected)
+- Post & announce: removed the "Schedule posting" and "Post directly on LinkedIn" cards
+- Database: applications.client_prev_stage (added automatically)
+
 Patch 47 + extension 1.9.2
 - Removed "Schedule this post" from the LinkedIn card and the "LinkedIn post" option from Schedule posting (Indeed job / LinkedIn job scheduling stays)
 - "Create post on LinkedIn" stays
