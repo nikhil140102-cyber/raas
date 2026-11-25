@@ -64,8 +64,7 @@ export default async function AnnouncePage({ params, searchParams }) {
         <section className="col-main">
           <h2>Social media posts</h2>
           {PLATFORMS.map((p) => (
-            <PostCard key={p.id} jobId={job.id} platform={p.id} name={p.name} hint={p.hint} samples={posts[p.id]} shareUrl={links[p.id]} link={trackedUrl(job, p.id)} defaultOpen={p.id === 'linkedin'}
-              team={p.id === 'linkedin' ? team.map((t) => ({ id: t.id, name: t.name })) : null} userId={user.id} istNow={istNow}>
+            <PostCard key={p.id} jobId={job.id} platform={p.id} name={p.name} hint={p.hint} samples={posts[p.id]} shareUrl={links[p.id]} link={trackedUrl(job, p.id)} defaultOpen={p.id === 'linkedin'}>
               {p.id === 'linkedin' && connected ? (
                 <form id="li-form-linkedin" action={postToLinkedIn}>
                   <input type="hidden" name="job_id" value={job.id} />
@@ -100,13 +99,12 @@ export default async function AnnouncePage({ params, searchParams }) {
           </FoldCard>
 
           <FoldCard id="side-schedule" anchor="schedule" title="Schedule posting" defaultOpen>
-            <p className="tiny muted">At the chosen time the person you pick gets a reminder on their dashboard and in the AvaStars Chrome extension. The extension fills the job form or writes the LinkedIn post; they check it and click Publish / Post.</p>
+            <p className="tiny muted">At the chosen time the person you pick gets a reminder on their dashboard and in the AvaStars Chrome extension. The extension fills the portal&apos;s job form; they check it and click Publish.</p>
             <form action={createSchedule} className="stack" style={{ gap: 8 }}>
               <input type="hidden" name="job_id" value={job.id} />
               <div className="row" style={{ gap: 14 }}>
                 <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="indeed" defaultChecked /> Indeed job</label>
                 <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="linkedin" defaultChecked /> LinkedIn job</label>
-                <label className="row small" style={{ gap: 6 }}><input type="checkbox" name="portal" value="linkedin_post" /> LinkedIn post</label>
               </div>
               <label className="field">When (India time)<input type="datetime-local" name="when" min={istNow} defaultValue={istNow} required /></label>
               <label className="field">Who publishes it
@@ -160,7 +158,7 @@ export default async function AnnouncePage({ params, searchParams }) {
               <li>Edit the text if you like.</li>
               <li>Click Share or Copy + open. The post opens in that app.</li>
               <li>For Indeed and Naukri, copy each field into their job form, then paste the live link back here.</li>
-              <li>With the AvaStars extension, “Create post on LinkedIn” writes the post for you; you click Post (or LinkedIn&apos;s clock icon to schedule it).</li>
+              <li>With the AvaStars extension, “Create post on LinkedIn” writes the post for you; you click Post.</li>
             </ol>
           </FoldCard>
 

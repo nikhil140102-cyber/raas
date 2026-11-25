@@ -348,7 +348,7 @@
     }
     await sleep(300);
     if (clean(editor.textContent).length < 5) throw new Error('Could not type the post. Paste it yourself (Ctrl+V).');
-    toast('post written ✓ Check it, then click Post — or the clock icon to schedule it.', 'ok');
+    toast('post written ✓ Check it, then click Post.', 'ok');
     // When they click Post / Schedule and the box closes, mark it done in AvaStars.
     const dialog = editor.closest('dialog, [role="dialog"], .artdeco-modal') || document.body;
     const onClick = (e) => {

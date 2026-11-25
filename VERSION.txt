@@ -1,3 +1,7 @@
+Patch 47 + extension 1.9.2
+- Removed "Schedule this post" from the LinkedIn card and the "LinkedIn post" option from Schedule posting (Indeed job / LinkedIn job scheduling stays)
+- "Create post on LinkedIn" stays
+
 Extension 1.9.1 (patch 46)
 - "Create post on LinkedIn" works with LinkedIn's new post box (it opens as a pop-up with a new editor); the text is typed in with its line breaks and hashtags
 
